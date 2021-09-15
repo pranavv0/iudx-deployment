@@ -3,6 +3,7 @@
 1. Controller Installation
 
 ```
+helm repo add sealed-secrets https://bitnami-labs.github.io/sealed-secrets
 helm install --version 1.16.1 --namespace kube-system sealed-secrets-controller  sealed-secrets/sealed-secrets
 ```
 2. Kubseal client installation
