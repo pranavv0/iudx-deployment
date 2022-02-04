@@ -19,21 +19,21 @@ kubectl create namespace cert-manager
 ```
 helm install -f cert-manager-values.yaml -f resource-values.yaml  cert-manager jetstack/cert-manager --namespace cert-manager  --create-namespace  --version  v1.6.1 --set installCRDs=true
 ```
-3. Uninstalling with Helm
-
+## Uninstalling with Helm
+1. Uninstalling cert-manager from a helm installation using the delete command on helm.
 ```
 helm --namespace cert-manager delete cert-manager
 ```
-Next, delete the cert-manager namespace:
+2. Delete the cert-manager namespace:
 
 ```
 kubectl delete namespace cert-manager
 ```
 
-Finally, delete the cert-manger CustomResourceDefinitions using the link to the version v1.6.1 you installed:
+3. Finally, delete the cert-manger CustomResourceDefinitions using the link to the version v1.6.1 you installed: 
 
 ```
 kubectl delete -f https://github.com/jetstack/cert-manager/releases/download/v1.6.1/cert-manager.crds.yaml
 ```
-
+Note: This command will also remove installed cert-manager CRDs and all cert-manager resources (e.g. certificates.cert-manager.io resources) by Kubernetes' garbage collector.
 
