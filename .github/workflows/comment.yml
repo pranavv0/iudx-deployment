@@ -195,7 +195,7 @@ jobs:
          token: ${{ env.GITHUB_TOKEN }}
 
     
-    - name: configure resource server
+    - name: configure catalogue server
       run: |
         cp -r K8s-deployment/Charts/catalogue/example-secrets/* K8s-deployment/Charts/catalogue/
         echo "${{ secrets.CAT_RESOURCE_VALUES }}" > K8s-deployment/Charts/catalogue/resource-values.yaml
@@ -256,12 +256,10 @@ jobs:
     - name: Get Pull Request context
       id: extract_pr
       run: |        
-        OWNER=$(curl -s -H "Authorization: Bearer ${{ env.GITHUB_TOKEN }}" https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.issue.number }}| jq -r '.head.repo.owner.login')
-        REPO=$(curl -s -H "Authorization: Bearer ${{ env.GITHUB_TOKEN }}" https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.issue.number }}| jq -r '.head.repo.name')
-        REF=$(curl -s -H "Authorization: Bearer ${{ env.GITHUB_TOKEN }}" https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.issue.number }}| jq -r '.head.ref')
-        echo "OWNER=${OWNER}" >> $GITHUB_ENV
-        echo "REPO=${REPO}" >> $GITHUB_ENV
-        echo "REF=${REF}" >> $GITHUB_ENV       
+        output=$(curl -s -H "Authorization: Bearer ${{ env.GITHUB_TOKEN }}" https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.issue.number }} )
+        echo "OWNER=$(echo $output | jq -r '.head.repo.owner.login')" >> $GITHUB_ENV
+        echo "REPO=$(echo $output | jq -r '.head.repo.name')" >> $GITHUB_ENV
+        echo "REF=$(echo $output | jq -r '.head.ref')" >> $GITHUB_ENV     
         
 
     - name: Checkout PR API
@@ -287,23 +285,20 @@ jobs:
          token: ${{ env.GITHUB_TOKEN }}
 
     
-    - name: configure resource server
+    - name: configure File server
       run: |
-        cp -r K8s-deployment/Charts/resource-server/example-secrets/* K8s-deployment/Charts/resource-server/
-        echo "${{ secrets.RS_RESOURCE_VALUES }}" > K8s-deployment/Charts/resource-server/resource-values.yaml
-        echo -n "${{ secrets.AWS_SECRET_ACCESS_KEY }}"  > K8s-deployment/Charts/resource-server/secrets/AWS_SECRET_ACCESS_KEY
-        echo -n "${{ secrets.AWS_ACCESS_KEY_ID }}" > K8s-deployment/Charts/resource-server/secrets/AWS_ACCESS_KEY_ID
-        echo "${{ secrets.RS_CONFIG }}" | base64 --decode > K8s-deployment/Charts/resource-server/secrets/config.json
-        echo "${{ secrets.RS_TEST_CONFIG }}" | base64 --decode > rs_test_config.json
+        cp -r K8s-deployment/Charts/file-server/example-secrets/* K8s-deployment/Charts/file-server/
+        echo "${{ secrets.FS_RESOURCE_VALUES }}" > K8s-deployment/Charts/file-server/resource-values.yaml
+        echo "${{ secrets.FS_CONFIG }}" | base64 --decode > K8s-deployment/Charts/file-server/secrets/config.json
+        echo "${{ secrets.FS_TEST_CONFIG }}" | base64 --decode > fs_test_config.json
         
     - name: deploy
       run: |
-        cd K8s-deployment/Charts/resource-server/
+        cd K8s-deployment/Charts/file-server/
         kubectl create ns fs-test
-        kubectl create configmap rs-env --from-env-file=./secrets/.rs.env -n fs-test
-        kubectl create secret generic rs-s3-env --from-file=./secrets/AWS_ACCESS_KEY_ID --from-file=./secrets/AWS_SECRET_ACCESS_KEY -n fs-test
-        kubectl create secret generic rs-config --from-file=./secrets/config.json -n fs-test
-        helm install resource-server "../resource-server" -f values.yaml -f resource-values.yaml -n fs-test
+        kubectl create configmap fs-env --from-env-file=./secrets/.fs.env -n fs-test
+        kubectl create secret generic fs-config --from-file=./secrets/config.json -n fs-test
+        helm install file-server  -f values.yaml -f resource-values.yaml ../file-server/ -n fs-test
         
     - name: Install Testkube
       run: |
@@ -323,6 +318,7 @@ jobs:
         sleep 2m
         execution_output=$(tk get execution --test ${{ env.test_name }} --output json)
         result_id=$(echo $execution_output | jq -r '.results[0].id')
+        status=$(echo $execution_output | jq -r '.results[0].status')
         kubectl testkube download artifacts $result_id
         
     - name: Upload test reports
@@ -350,12 +346,10 @@ jobs:
     - name: Get Pull Request context
       id: extract_pr
       run: |        
-        OWNER=$(curl -s -H "Authorization: Bearer ${{ env.GITHUB_TOKEN }}" https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.issue.number }}| jq -r '.head.repo.owner.login')
-        REPO=$(curl -s -H "Authorization: Bearer ${{ env.GITHUB_TOKEN }}" https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.issue.number }}| jq -r '.head.repo.name')
-        REF=$(curl -s -H "Authorization: Bearer ${{ env.GITHUB_TOKEN }}" https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.issue.number }}| jq -r '.head.ref')
-        echo "OWNER=${OWNER}" >> $GITHUB_ENV
-        echo "REPO=${REPO}" >> $GITHUB_ENV
-        echo "REF=${REF}" >> $GITHUB_ENV       
+        output=$(curl -s -H "Authorization: Bearer ${{ env.GITHUB_TOKEN }}" https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.issue.number }} )
+        echo "OWNER=$(echo $output | jq -r '.head.repo.owner.login')" >> $GITHUB_ENV
+        echo "REPO=$(echo $output | jq -r '.head.repo.name')" >> $GITHUB_ENV
+        echo "REF=$(echo $output | jq -r '.head.ref')" >> $GITHUB_ENV     
         
 
     - name: Checkout PR API
@@ -381,23 +375,20 @@ jobs:
          token: ${{ env.GITHUB_TOKEN }}
 
     
-    - name: configure resource server
+    - name: configure data ingestion
       run: |
-        cp -r K8s-deployment/Charts/resource-server/example-secrets/* K8s-deployment/Charts/resource-server/
-        echo "${{ secrets.RS_RESOURCE_VALUES }}" > K8s-deployment/Charts/resource-server/resource-values.yaml
-        echo -n "${{ secrets.AWS_SECRET_ACCESS_KEY }}"  > K8s-deployment/Charts/resource-server/secrets/AWS_SECRET_ACCESS_KEY
-        echo -n "${{ secrets.AWS_ACCESS_KEY_ID }}" > K8s-deployment/Charts/resource-server/secrets/AWS_ACCESS_KEY_ID
-        echo "${{ secrets.RS_CONFIG }}" | base64 --decode > K8s-deployment/Charts/resource-server/secrets/config.json
-        echo "${{ secrets.RS_TEST_CONFIG }}" | base64 --decode > rs_test_config.json
+        cp -r K8s-deployment/Charts/data-ingestion/example-secrets/* K8s-deployment/Charts/data-ingestion/
+        echo "${{ secrets.DI_RESOURCE_VALUES }}" > K8s-deployment/Charts/data-ingestion/resource-values.yaml
+        echo "${{ secrets.DI_CONFIG }}" | base64 --decode > K8s-deployment/Charts/data-ingestion/secrets/config.json
+        echo "${{ secrets.DI_TEST_CONFIG }}" | base64 --decode > di_test_config.json
         
     - name: deploy
       run: |
-        cd K8s-deployment/Charts/resource-server/
-        kubectl create ns rs-test
-        kubectl create configmap rs-env --from-env-file=./secrets/.rs.env -n rs-test
-        kubectl create secret generic rs-s3-env --from-file=./secrets/AWS_ACCESS_KEY_ID --from-file=./secrets/AWS_SECRET_ACCESS_KEY -n rs-test
-        kubectl create secret generic rs-config --from-file=./secrets/config.json -n rs-test
-        helm install resource-server "../resource-server" -f values.yaml -f resource-values.yaml -n rs-test
+        cd K8s-deployment/Charts/data-ingestion/
+        kubectl create ns di-test
+        kubectl create configmap di-env --from-env-file=./secrets/.di.env -n di-test
+        kubectl create secret generic di-config --from-file=./secrets/config.json -n di-test
+        helm install data-ingestion "../data-ingestion" -f values.yaml -f resource-values.yaml -n di-test
         
     - name: Install Testkube
       run: |
@@ -416,6 +407,7 @@ jobs:
         sleep 2m
         execution_output=$(tk get execution --test ${{ env.test_name }} --output json)
         result_id=$(echo $execution_output | jq -r '.results[0].id')
+        status=$(echo $execution_output | jq -r '.results[0].status')
         kubectl testkube download artifacts $result_id
         
     - name: Upload test reports
@@ -426,7 +418,7 @@ jobs:
         
     - name: Delete deployment
       run: |
-       kubectl delete ns rs-test 
+       kubectl delete ns di-test 
        testkube  delete executor pytest-executor-gh
     
   deploy_gis:
@@ -444,12 +436,10 @@ jobs:
     - name: Get Pull Request context
       id: extract_pr
       run: |        
-        OWNER=$(curl -s -H "Authorization: Bearer ${{ env.GITHUB_TOKEN }}" https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.issue.number }}| jq -r '.head.repo.owner.login')
-        REPO=$(curl -s -H "Authorization: Bearer ${{ env.GITHUB_TOKEN }}" https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.issue.number }}| jq -r '.head.repo.name')
-        REF=$(curl -s -H "Authorization: Bearer ${{ env.GITHUB_TOKEN }}" https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.issue.number }}| jq -r '.head.ref')
-        echo "OWNER=${OWNER}" >> $GITHUB_ENV
-        echo "REPO=${REPO}" >> $GITHUB_ENV
-        echo "REF=${REF}" >> $GITHUB_ENV       
+        output=$(curl -s -H "Authorization: Bearer ${{ env.GITHUB_TOKEN }}" https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.issue.number }} )
+        echo "OWNER=$(echo $output | jq -r '.head.repo.owner.login')" >> $GITHUB_ENV
+        echo "REPO=$(echo $output | jq -r '.head.repo.name')" >> $GITHUB_ENV
+        echo "REF=$(echo $output | jq -r '.head.ref')" >> $GITHUB_ENV       
         
 
     - name: Checkout PR API
@@ -457,7 +447,7 @@ jobs:
       with:
         repository: ${{ env.OWNER }}/${{ env.REPO }}
         ref: ${{ env.REF }}       
-
+          
     - name: Install kubectl
       uses: azure/setup-kubectl@v3
       with:
@@ -475,29 +465,24 @@ jobs:
          token: ${{ env.GITHUB_TOKEN }}
 
     
-    - name: configure resource server
+    - name: configure gis interface
       run: |
-        cp -r K8s-deployment/Charts/resource-server/example-secrets/* K8s-deployment/Charts/resource-server/
-        echo "${{ secrets.RS_RESOURCE_VALUES }}" > K8s-deployment/Charts/resource-server/resource-values.yaml
-        echo -n "${{ secrets.AWS_SECRET_ACCESS_KEY }}"  > K8s-deployment/Charts/resource-server/secrets/AWS_SECRET_ACCESS_KEY
-        echo -n "${{ secrets.AWS_ACCESS_KEY_ID }}" > K8s-deployment/Charts/resource-server/secrets/AWS_ACCESS_KEY_ID
-        echo "${{ secrets.RS_CONFIG }}" | base64 --decode > K8s-deployment/Charts/resource-server/secrets/config.json
-        echo "${{ secrets.RS_TEST_CONFIG }}" | base64 --decode > rs_test_config.json
+        cp -r K8s-deployment/Charts/gis-interface/example-secrets/* K8s-deployment/Charts/gis-interface/
+        echo "${{ secrets.GIS_RESOURCE_VALUES }}" > K8s-deployment/Charts/gis-interface/resource-values.yaml
+        echo "${{ secrets.GIS_CONFIG }}" | base64 --decode > K8s-deployment/Charts/gis-interface/secrets/config.json
+        echo "${{ secrets.GIS_TEST_CONFIG }}" | base64 --decode > gis_test_config.json
         
     - name: deploy
       run: |
-        cd K8s-deployment/Charts/resource-server/
+        cd K8s-deployment/Charts/gis-interface/
         kubectl create ns gis-test
-        kubectl create configmap rs-env --from-env-file=./secrets/.rs.env -n gus-test
-        kubectl create secret generic rs-s3-env --from-file=./secrets/AWS_ACCESS_KEY_ID --from-file=./secrets/AWS_SECRET_ACCESS_KEY -n gis-test
-        kubectl create secret generic rs-config --from-file=./secrets/config.json -n gis-test
-        helm install resource-server "../resource-server" -f values.yaml -f resource-values.yaml -n gis-test
+        kubectl create configmap gis-env --from-env-file=./secrets/.gis-api.env -n gis-test
+        kubectl create secret generic gis-config --from-file=./secrets/config.json -n gis-test
+        helm install gis-interface "../gis-interface" -f values.yaml -f resource-values.yaml -n gis-test
         
     - name: Install Testkube
       run: |
         wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add - && echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list && sudo apt-get update && sudo apt-get install -y testkube
-        kubectl testkube get test
-        pwd
         
     - name: Test Execute
       run: |
@@ -510,8 +495,9 @@ jobs:
     - name: Download Test reports
       run: |
         sleep 2m
-        execution_output=$(tk get execution --test  ${{ env.test_name }} --output json)
+        execution_output=$(tk get execution --test ${{ env.test_name }} --output json)
         result_id=$(echo $execution_output | jq -r '.results[0].id')
+        status=$(echo $execution_output | jq -r '.results[0].status')
         kubectl testkube download artifacts $result_id
         
     - name: Upload test reports
@@ -524,5 +510,4 @@ jobs:
       run: |
        kubectl delete ns gis-test 
        testkube  delete executor pytest-executor-gh
-    
-            
+       
