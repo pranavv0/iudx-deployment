@@ -11,18 +11,16 @@ jobs:
     if: startsWith(github.event.comment.body, '/test_') && github.event.issue.pull_request != null
     outputs:
       PERMISSIONS: ${{ steps.user_access.outputs.PERMISSIONS }}
+      TESTNAME: ${{ steps.com_chk.outputs.TESTNAME }}
     steps:
     - name: Check Comment
       id: com_chk
       run: |
         #!/bin/bash
-
         # Define the list of comments
         comments=("/test_rs" "/test_cat" "/test_fs" "/test_di" "/test_gis" )
-
         # Get the comment body from the event payload
         comment_body=$(jq -r ".comment.body" "$GITHUB_EVENT_PATH")
-
         # Check if the comment matches any of the defined comments
         for i in "${comments[@]}"
         do
@@ -30,6 +28,7 @@ jobs:
             # The comment matches one of the defined comments, so run the desired command
             echo "The comment matches \"$i\""
             echo "RESULT=TRUE" >> $GITHUB_ENV
+            echo "TESTNAME=$(echo \"$i\" | cut -d "_" -f 2-)" >> $GITHUB_OUTPUT
             break
           fi
         done
@@ -41,14 +40,9 @@ jobs:
         #!/bin/bash
         # Get the permissions of the user who created the comment
         PERMISSIONS=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/repos/${{ github.repository }}/collaborators/${{ github.event.comment.user.login }}/permission" | jq -r ".permission")
-
         # Check if the user has write permission
-        if [ "$PERMISSIONS" == "write" ]; then
-          echo "User has write permission"
-          echo "PERMISSIONS=granted" >> $GITHUB_OUTPUT
-          
-        elif  [ "$PERMISSIONS" == "admin" ]; then
-          echo "User has admin permission"
+        if [ "$PERMISSIONS" == "write" ] || [ "$PERMISSIONS" == "admin" ]; then
+          echo "User has permission"
           echo "PERMISSIONS=granted" >> $GITHUB_OUTPUT
         else
           echo "User does not have write permission"
@@ -57,17 +51,13 @@ jobs:
           curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -X POST -d "{\"body\":\"@${{ github.event.comment.user.login }} You are not authorized to trigger this workflow. Only users with write permission can trigger this workflow.\"}" "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments"
         fi
         
-
-  deploy_rs:
+  deploy:
     needs: check
     runs-on: ubuntu-latest
     env:
         GITHUB_TOKEN: ${{ secrets.TOKEN }}
-    if: |
-      needs.check.outputs.PERMISSIONS =='granted' &&
-      (
-       github.event.comment.body =='/test_rs'     
-      )
+    if: needs.check.outputs.PERMISSIONS =='granted'
+  
     steps: 
     - name: Get Pull Request context
       id: extract_pr
@@ -77,6 +67,26 @@ jobs:
         echo "REPO=$(echo $output | jq -r '.head.repo.name')" >> $GITHUB_ENV
         echo "REF=$(echo $output | jq -r '.head.ref')" >> $GITHUB_ENV       
         
+    - name: Get test details
+      id: details
+      run: |
+        #!/bin/bash
+
+        if [[ needs.check.outputs.TESTNAME == "rs" ]]; then
+            echo "TESTFOLDER=resource-server" >> $GITHUB_ENV
+        elif [[ needs.check.outputs.TESTNAME == "cat" ]]; then
+            echo "TESTFOLDER=catalogue" >> $GITHUB_ENV
+        elif [[ needs.check.outputs.TESTNAME == "fs" ]]; then
+            echo "TESTFOLDER=file-server" >> $GITHUB_ENV
+        elif [[ needs.check.outputs.TESTNAME == "gis" ]]; then
+            echo "TESTFOLDER=gis-interface" >> $GITHUB_ENV
+        elif [[ needs.check.outputs.TESTNAME == "di" ]]; then
+            echo "TESTFOLDER=data-ingestion" >> $GITHUB_ENV
+        else
+            echo "Invalid input"
+            exit 1
+        fi
+
 
     - name: Checkout PR API
       uses: actions/checkout@v3
@@ -100,25 +110,29 @@ jobs:
       with:
          token: ${{ env.GITHUB_TOKEN }}
 
-    
-    - name: configure resource server
+    - name: configure Server
       run: |
-        cp -r K8s-deployment/Charts/resource-server/example-secrets/* K8s-deployment/Charts/resource-server/
-        echo "${{ secrets.RS_RESOURCE_VALUES }}" > K8s-deployment/Charts/resource-server/resource-values.yaml
-        echo -n "${{ secrets.AWS_SECRET_ACCESS_KEY }}"  > K8s-deployment/Charts/resource-server/secrets/AWS_SECRET_ACCESS_KEY
+        cp -r K8s-deployment/Charts/${{ env.TESTFOLDER }}/example-secrets/* K8s-deployment/Charts/${{ env.TESTFOLDER }}/
+        echo "${{ secrets.${{ needs.check.outputs.TESTNAME }}_RESOURCE_VALUES }}" > K8s-deployment/Charts/${{ env.TESTFOLDER }}/resource-values.yaml
+        echo "${{ secrets.${{ needs.check.outputs.TESTNAME }}_CONFIG }}" | base64 --decode > K8s-deployment/Charts/${{ env.TESTFOLDER }}/secrets/config.json
+        echo "${{ secrets.${{ needs.check.outputs.TESTNAME }}_TEST_CONFIG }}" | base64 --decode > ${{ needs.check.outputs.TESTNAME }}_test_config.json
+    
+    - name: Resource Server
+      if: ${{ needs.check.outputs.TESTNAME == "rs" }}
+      run: |
         echo -n "${{ secrets.AWS_ACCESS_KEY_ID }}" > K8s-deployment/Charts/resource-server/secrets/AWS_ACCESS_KEY_ID
-        echo "${{ secrets.rs_CONFIG }}" | base64 --decode > K8s-deployment/Charts/resource-server/secrets/config.json
-        echo "${{ secrets.RS_TEST_CONFIG }}" | base64 --decode > rs_test_config.json
-        
+        echo -n "${{ secrets.AWS_SECRET_ACCESS_KEY }}"  > K8s-deployment/Charts/resource-server/secrets/AWS_SECRET_ACCESS_KEY
+        kubectl create secret generic rs-s3-env --from-file=K8s-deployment/Charts/resource-server/secrets/AWS_ACCESS_KEY_ID --from-file=K8s-deployment/Charts/resource-server/secrets/AWS_SECRET_ACCESS_KEY -n rs-test
+
     - name: deploy
       run: |
-        cd K8s-deployment/Charts/resource-server/
-        kubectl create ns rs-test
-        kubectl create configmap rs-env --from-env-file=./secrets/.rs.env -n rs-test
-        kubectl create secret generic rs-s3-env --from-file=./secrets/AWS_ACCESS_KEY_ID --from-file=./secrets/AWS_SECRET_ACCESS_KEY -n rs-test
-        kubectl create secret generic rs-config --from-file=./secrets/config.json -n rs-test
-        helm install resource-server "../resource-server" -f values.yaml -f resource-values.yaml -n rs-test
-        
+        cd K8s-deployment/Charts/${{ env.TESTFOLDER }}/
+        kubectl create ns ${{ needs.check.outputs.TESTNAME }}-test
+        kubectl create configmap ${{ needs.check.outputs.TESTNAME }}-env --from-env-file=./secrets/.${{ needs.check.outputs.TESTNAME }}.env -n ${{ needs.check.outputs.TESTNAME }}-test
+        kubectl create secret generic ${{ needs.check.outputs.TESTNAME }}-config --from-file=./secrets/config.json -n ${{ needs.check.outputs.TESTNAME }}-test
+        helm install ${{ env.TESTFOLDER }} ../${{ env.TESTFOLDER }} -f values.yaml -f resource-values.yaml -n ${{ needs.check.outputs.TESTNAME }}-test
+    
+            
     - name: Install Testkube
       run: |
         wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add - && echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list && sudo apt-get update && sudo apt-get install -y testkube
@@ -126,10 +140,10 @@ jobs:
     - name: Test Execute
       run: |
         datetime=$(date +"%Y-%m-%d-%H-%M-%S")
-        testkube create executor --name pytest-executor-gh --namespace testkube --types pytest-executor-gh1/test-gh-1 --executor-type container --image docker.io/pranav0/testkube-executor-pytest:1.0.9 --command "pytest" --command "test_rs.py" --command "--html=/share/test/reports/rs_report.html" --feature artifacts --content-type string
-        testkube create test --name "rs-test-$datetime" --namespace testkube --file  rs_test_config.json --type pytest-executor-gh1/test-gh-1 --artifact-storage-class-name azuredisk-storage-class --artifact-volume-mount-path /share --artifact-dir test/reports
-        testkube run test rs-test-$datetime --download-artifacts
-        echo "test_name=rs-test-$datetime" >> $GITHUB_ENV 
+        testkube create executor --name pytest-executor-gh --namespace testkube --types pytest-executor-gh1/test-gh-1 --executor-type container --image docker.io/pranav0/testkube-executor-pytest:1.0.9 --command "pytest" --command "test_${{ needs.check.outputs.TESTNAME }}.py" --command "--html=/share/test/reports/report.html" --feature artifacts --content-type string
+        testkube create test --name "${{ needs.check.outputs.TESTNAME }}-test-$datetime" --namespace testkube --file  ${{ needs.check.outputs.TESTNAME }}_test_config.json --type pytest-executor-gh1/test-gh-1 --artifact-storage-class-name azuredisk-storage-class --artifact-volume-mount-path /share --artifact-dir test/reports
+        testkube run test ${{ needs.check.outputs.TESTNAME }}-test-$datetime --download-artifacts
+        echo "test_name=${{ needs.check.outputs.TESTNAME }}-test-$datetime" >> $GITHUB_ENV 
         
     - name: Download Test reports
       run: |
@@ -147,367 +161,5 @@ jobs:
         
     - name: Delete deployment
       run: |
-       kubectl delete ns rs-test 
+       kubectl delete ns ${{ needs.check.outputs.TESTNAME }}-test 
        testkube  delete executor pytest-executor-gh
-       
-    
-    
-  deploy_cat:
-    needs: check
-    runs-on: ubuntu-latest
-    env:
-        GITHUB_TOKEN: ${{ secrets.TOKEN }}
-    if: |
-      needs.check.outputs.PERMISSIONS =='granted' &&
-      (
-       github.event.comment.body =='/test_cat'     
-      )
-    steps:
-    - name: Get Pull Request context
-      id: extract_pr
-      run: |        
-        output=$(curl -s -H "Authorization: Bearer ${{ env.GITHUB_TOKEN }}" https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.issue.number }} )
-        echo "OWNER=$(echo $output | jq -r '.head.repo.owner.login')" >> $GITHUB_ENV
-        echo "REPO=$(echo $output | jq -r '.head.repo.name')" >> $GITHUB_ENV
-        echo "REF=$(echo $output | jq -r '.head.ref')" >> $GITHUB_ENV      
-        
-
-    - name: Checkout PR API
-      uses: actions/checkout@v3
-      with:
-        repository: ${{ env.OWNER }}/${{ env.REPO }}
-        ref: ${{ env.REF }}
-          
-    - name: Install kubectl
-      uses: azure/setup-kubectl@v3
-      with:
-        version: 'v1.24.8'
-      id: install
-      
-    - name: Configure kubectl
-      run: |
-        mkdir -p $HOME/.kube
-        echo "${{ secrets.KUBE_CONFIG }}" | base64 --decode > $HOME/.kube/config
-      
-    - name: Install Helm
-      uses: azure/setup-helm@v3
-      with:
-         token: ${{ env.GITHUB_TOKEN }}
-
-    
-    - name: configure catalogue server
-      run: |
-        cp -r K8s-deployment/Charts/catalogue/example-secrets/* K8s-deployment/Charts/catalogue/
-        echo "${{ secrets.CAT_RESOURCE_VALUES }}" > K8s-deployment/Charts/catalogue/resource-values.yaml
-        echo "${{ secrets.CAT_CONFIG }}" | base64 --decode > K8s-deployment/Charts/catalogue/secrets/config.json
-        echo "${{ secrets.CAT_TEST_CONFIG }}" | base64 --decode > cat_test_config.json
-        
-    - name: deploy
-      run: |
-        cd K8s-deployment/Charts/catalogue/
-        kubectl create ns cat-test
-        kubectl create configmap cat-env --from-env-file=./secrets/.cat.env -n cat-test
-        kubectl create secret generic cat-config --from-file=./secrets/config.json -n cat-test
-        helm install catalogue-server ../catalogue -f values.yaml -f resource-values.yaml -n cat-test
-        
-    - name: Install Testkube
-      run: |
-        wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add - && echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list && sudo apt-get update && sudo apt-get install -y testkube
-        
-    - name: Test Execute
-      run: |
-        datetime=$(date +"%Y-%m-%d-%H-%M-%S")
-        testkube create executor --name pytest-executor-gh --namespace testkube --types pytest-executor-gh1/test-gh-1 --executor-type container --image docker.io/pranav0/testkube-executor-pytest:1.0.9 --command "pytest" --command "test_cat.py" --command "--html=/share/test/reports/cat_report.html" --feature artifacts --content-type string
-        testkube create test --name "cat-test-$datetime" --namespace testkube --file  cat_test_config.json --type pytest-executor-gh1/test-gh-1 --artifact-storage-class-name azuredisk-storage-class --artifact-volume-mount-path /share --artifact-dir test/reports
-        testkube run test cat-test-$datetime --download-artifacts
-        echo "test_name=cat-test-$datetime" >> $GITHUB_ENV 
-        
-    - name: Download Test reports
-      run: |
-        sleep 2m
-        execution_output=$(tk get execution --test ${{ env.test_name }} --output json)
-        result_id=$(echo $execution_output | jq -r '.results[0].id')
-        status=$(echo $execution_output | jq -r '.results[0].status')
-        kubectl testkube download artifacts $result_id
-        
-    - name: Upload test reports
-      uses: actions/upload-artifact@v3
-      with:
-        name: Test Reports
-        path: artifacts/
-        
-    - name: Delete deployment
-      run: |
-       kubectl delete ns cat-test 
-       testkube  delete executor pytest-executor-gh
-    
-
-  deploy_fs:
-    needs: check
-    runs-on: ubuntu-latest
-    env:
-        GITHUB_TOKEN: ${{ secrets.TOKEN }}
-    if: |
-      needs.check.outputs.PERMISSIONS =='granted' &&
-      (
-       github.event.comment.body =='/test_fs'     
-      )
-    steps: 
-    - name: Get Pull Request context
-      id: extract_pr
-      run: |        
-        output=$(curl -s -H "Authorization: Bearer ${{ env.GITHUB_TOKEN }}" https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.issue.number }} )
-        echo "OWNER=$(echo $output | jq -r '.head.repo.owner.login')" >> $GITHUB_ENV
-        echo "REPO=$(echo $output | jq -r '.head.repo.name')" >> $GITHUB_ENV
-        echo "REF=$(echo $output | jq -r '.head.ref')" >> $GITHUB_ENV     
-        
-
-    - name: Checkout PR API
-      uses: actions/checkout@v3
-      with:
-        repository: ${{ env.OWNER }}/${{ env.REPO }}
-        ref: ${{ env.REF }}       
-          
-    - name: Install kubectl
-      uses: azure/setup-kubectl@v3
-      with:
-        version: 'v1.24.8'
-      id: install
-      
-    - name: Configure kubectl
-      run: |
-        mkdir -p $HOME/.kube
-        echo "${{ secrets.KUBE_CONFIG }}" | base64 --decode > $HOME/.kube/config
-      
-    - name: Install Helm
-      uses: azure/setup-helm@v3
-      with:
-         token: ${{ env.GITHUB_TOKEN }}
-
-    
-    - name: configure File server
-      run: |
-        cp -r K8s-deployment/Charts/file-server/example-secrets/* K8s-deployment/Charts/file-server/
-        echo "${{ secrets.FS_RESOURCE_VALUES }}" > K8s-deployment/Charts/file-server/resource-values.yaml
-        echo "${{ secrets.FS_CONFIG }}" | base64 --decode > K8s-deployment/Charts/file-server/secrets/config.json
-        echo "${{ secrets.FS_TEST_CONFIG }}" | base64 --decode > fs_test_config.json
-        
-    - name: deploy
-      run: |
-        cd K8s-deployment/Charts/file-server/
-        kubectl create ns fs-test
-        kubectl create configmap fs-env --from-env-file=./secrets/.fs.env -n fs-test
-        kubectl create secret generic fs-config --from-file=./secrets/config.json -n fs-test
-        helm install file-server  -f values.yaml -f resource-values.yaml ../file-server/ -n fs-test
-        
-    - name: Install Testkube
-      run: |
-        wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add - && echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list && sudo apt-get update && sudo apt-get install -y testkube
-        
-    - name: Test Execute
-      run: |
-        datetime=$(date +"%Y-%m-%d-%H-%M-%S")
-        testkube create executor --name pytest-executor-gh --namespace testkube --types pytest-executor-gh1/test-gh-1 --executor-type container --image docker.io/pranav0/testkube-executor-pytest:1.0.9 --command "pytest" --command "test_fs.py" --command "--html=/share/test/reports/fs_report.html" --feature artifacts --content-type string
-        testkube create test --name "fs-test-$datetime" --namespace testkube --file  fs_test_config.json --type pytest-executor-gh1/test-gh-1 --artifact-storage-class-name azuredisk-storage-class --artifact-volume-mount-path /share --artifact-dir test/reports
-        testkube run test fs-test-$datetime --download-artifacts
-        echo "test_name=fs-test-$datetime" >> $GITHUB_ENV 
-        
-        
-    - name: Download Test reports
-      run: |
-        sleep 2m
-        execution_output=$(tk get execution --test ${{ env.test_name }} --output json)
-        result_id=$(echo $execution_output | jq -r '.results[0].id')
-        status=$(echo $execution_output | jq -r '.results[0].status')
-        kubectl testkube download artifacts $result_id
-        
-    - name: Upload test reports
-      uses: actions/upload-artifact@v3
-      with:
-        name: Test Reports
-        path: artifacts/
-        
-    - name: Delete deployment
-      run: |
-       kubectl delete ns fs-test 
-       testkube  delete executor pytest-executor-gh
-    
-  deploy_di:
-    needs: check
-    runs-on: ubuntu-latest
-    env:
-        GITHUB_TOKEN: ${{ secrets.TOKEN }}
-    if: |
-      needs.check.outputs.PERMISSIONS =='granted' &&
-      (
-       github.event.comment.body =='/test_di'     
-      )
-    steps: 
-    - name: Get Pull Request context
-      id: extract_pr
-      run: |        
-        output=$(curl -s -H "Authorization: Bearer ${{ env.GITHUB_TOKEN }}" https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.issue.number }} )
-        echo "OWNER=$(echo $output | jq -r '.head.repo.owner.login')" >> $GITHUB_ENV
-        echo "REPO=$(echo $output | jq -r '.head.repo.name')" >> $GITHUB_ENV
-        echo "REF=$(echo $output | jq -r '.head.ref')" >> $GITHUB_ENV     
-        
-
-    - name: Checkout PR API
-      uses: actions/checkout@v3
-      with:
-        repository: ${{ env.OWNER }}/${{ env.REPO }}
-        ref: ${{ env.REF }}  
-          
-    - name: Install kubectl
-      uses: azure/setup-kubectl@v3
-      with:
-        version: 'v1.24.8'
-      id: install
-      
-    - name: Configure kubectl
-      run: |
-        mkdir -p $HOME/.kube
-        echo "${{ secrets.KUBE_CONFIG }}" | base64 --decode > $HOME/.kube/config
-      
-    - name: Install Helm
-      uses: azure/setup-helm@v3
-      with:
-         token: ${{ env.GITHUB_TOKEN }}
-
-    
-    - name: configure data ingestion
-      run: |
-        cp -r K8s-deployment/Charts/data-ingestion/example-secrets/* K8s-deployment/Charts/data-ingestion/
-        echo "${{ secrets.DI_RESOURCE_VALUES }}" > K8s-deployment/Charts/data-ingestion/resource-values.yaml
-        echo "${{ secrets.DI_CONFIG }}" | base64 --decode > K8s-deployment/Charts/data-ingestion/secrets/config.json
-        echo "${{ secrets.DI_TEST_CONFIG }}" | base64 --decode > di_test_config.json
-        
-    - name: deploy
-      run: |
-        cd K8s-deployment/Charts/data-ingestion/
-        kubectl create ns di-test
-        kubectl create configmap di-env --from-env-file=./secrets/.di.env -n di-test
-        kubectl create secret generic di-config --from-file=./secrets/config.json -n di-test
-        helm install data-ingestion "../data-ingestion" -f values.yaml -f resource-values.yaml -n di-test
-        
-    - name: Install Testkube
-      run: |
-        wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add - && echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list && sudo apt-get update && sudo apt-get install -y testkube
-        
-    - name: Test Execute
-      run: |
-        datetime=$(date +"%Y-%m-%d-%H-%M-%S")
-        testkube create executor --name pytest-executor-gh --namespace testkube --types pytest-executor-gh1/test-gh-1 --executor-type container --image docker.io/pranav0/testkube-executor-pytest:1.0.9 --command "pytest" --command "test_di.py" --command "--html=/share/test/reports/di_report.html" --feature artifacts --content-type string
-        testkube create test --name "di-test-$datetime" --namespace testkube --file  di_test_config.json --type pytest-executor-gh1/test-gh-1 --artifact-storage-class-name azuredisk-storage-class --artifact-volume-mount-path /share --artifact-dir test/reports
-        testkube run test di-test-$datetime --download-artifacts
-        echo "test_name=di-test-$datetime" >> $GITHUB_ENV
-        
-    - name: Download Test reports
-      run: |
-        sleep 2m
-        execution_output=$(tk get execution --test ${{ env.test_name }} --output json)
-        result_id=$(echo $execution_output | jq -r '.results[0].id')
-        status=$(echo $execution_output | jq -r '.results[0].status')
-        kubectl testkube download artifacts $result_id
-        
-    - name: Upload test reports
-      uses: actions/upload-artifact@v3
-      with:
-        name: Test Reports
-        path: artifacts/
-        
-    - name: Delete deployment
-      run: |
-       kubectl delete ns di-test 
-       testkube  delete executor pytest-executor-gh
-    
-  deploy_gis:
-    needs: check
-    runs-on: ubuntu-latest
-    env:
-        GITHUB_TOKEN: ${{ secrets.TOKEN }}
-    if: |
-      needs.check.outputs.PERMISSIONS =='granted' &&
-      (
-       github.event.comment.body =='/test_gis'     
-      )
-    steps: 
-
-    - name: Get Pull Request context
-      id: extract_pr
-      run: |        
-        output=$(curl -s -H "Authorization: Bearer ${{ env.GITHUB_TOKEN }}" https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.issue.number }} )
-        echo "OWNER=$(echo $output | jq -r '.head.repo.owner.login')" >> $GITHUB_ENV
-        echo "REPO=$(echo $output | jq -r '.head.repo.name')" >> $GITHUB_ENV
-        echo "REF=$(echo $output | jq -r '.head.ref')" >> $GITHUB_ENV       
-        
-
-    - name: Checkout PR API
-      uses: actions/checkout@v3
-      with:
-        repository: ${{ env.OWNER }}/${{ env.REPO }}
-        ref: ${{ env.REF }}       
-          
-    - name: Install kubectl
-      uses: azure/setup-kubectl@v3
-      with:
-        version: 'v1.24.8'
-      id: install
-      
-    - name: Configure kubectl
-      run: |
-        mkdir -p $HOME/.kube
-        echo "${{ secrets.KUBE_CONFIG }}" | base64 --decode > $HOME/.kube/config
-      
-    - name: Install Helm
-      uses: azure/setup-helm@v3
-      with:
-         token: ${{ env.GITHUB_TOKEN }}
-
-    
-    - name: configure gis interface
-      run: |
-        cp -r K8s-deployment/Charts/gis-interface/example-secrets/* K8s-deployment/Charts/gis-interface/
-        echo "${{ secrets.GIS_RESOURCE_VALUES }}" > K8s-deployment/Charts/gis-interface/resource-values.yaml
-        echo "${{ secrets.GIS_CONFIG }}" | base64 --decode > K8s-deployment/Charts/gis-interface/secrets/config.json
-        echo "${{ secrets.GIS_TEST_CONFIG }}" | base64 --decode > gis_test_config.json
-        
-    - name: deploy
-      run: |
-        cd K8s-deployment/Charts/gis-interface/
-        kubectl create ns gis-test
-        kubectl create configmap gis-env --from-env-file=./secrets/.gis-api.env -n gis-test
-        kubectl create secret generic gis-config --from-file=./secrets/config.json -n gis-test
-        helm install gis-interface "../gis-interface" -f values.yaml -f resource-values.yaml -n gis-test
-        
-    - name: Install Testkube
-      run: |
-        wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add - && echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list && sudo apt-get update && sudo apt-get install -y testkube
-        
-    - name: Test Execute
-      run: |
-        datetime=$(date +"%Y-%m-%d-%H-%M-%S")
-        testkube create executor --name pytest-executor-gh --namespace testkube --types pytest-executor-gh1/test-gh-1 --executor-type container --image docker.io/pranav0/testkube-executor-pytest:1.0.9 --command "pytest" --command "test_gis.py" --command "--html=/share/test/reports/gis_report.html" --feature artifacts --content-type string
-        testkube create test --name "gis-test-$datetime" --namespace testkube --file  gis_test_config.json --type pytest-executor-gh1/test-gh-1 --artifact-storage-class-name azuredisk-storage-class --artifact-volume-mount-path /share --artifact-dir test/reports
-        testkube run test gis-test-$datetime --download-artifacts
-        echo "test_name=gis-test-$datetime" >> $GITHUB_ENV 
-        
-    - name: Download Test reports
-      run: |
-        sleep 2m
-        execution_output=$(tk get execution --test ${{ env.test_name }} --output json)
-        result_id=$(echo $execution_output | jq -r '.results[0].id')
-        status=$(echo $execution_output | jq -r '.results[0].status')
-        kubectl testkube download artifacts $result_id
-        
-    - name: Upload test reports
-      uses: actions/upload-artifact@v3
-      with:
-        name: Test Reports
-        path: artifacts/
-        
-    - name: Delete deployment
-      run: |
-       kubectl delete ns gis-test 
-       testkube  delete executor pytest-executor-gh
-       
