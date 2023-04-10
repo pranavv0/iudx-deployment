@@ -28,7 +28,7 @@ jobs:
             # The comment matches one of the defined comments, so run the desired command
             echo "The comment matches \"$i\""
             echo "RESULT=TRUE" >> $GITHUB_ENV
-            echo "TESTNAME=\"$(echo $i | cut -d "_" -f 2-)"\" >> $GITHUB_OUTPUT
+            echo "TESTNAME=$(echo $i | cut -d "_" -f 2-)" >> $GITHUB_OUTPUT
             break
           fi
         done
@@ -98,7 +98,7 @@ jobs:
       id: details
       run: |
         #!/bin/bash
-        if [[ needs.check.outputs.TESTNAME == "rs" ]]; then
+        if [[ needs.check.outputs.TESTNAME == rs ]]; then
             echo "TESTFOLDER=resource-server" >> $GITHUB_ENV
             cp -r K8s-deployment/Charts/resource-server/example-secrets/* K8s-deployment/Charts/resource-server/
             echo "${{ secrets.RS_RESOURCE_VALUES }}" > K8s-deployment/Charts/resource-server/resource-values.yaml
