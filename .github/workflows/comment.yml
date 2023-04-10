@@ -98,6 +98,7 @@ jobs:
       id: details
       run: |
         #!/bin/bash
+        echo ${{ needs.check.outputs.TESTNAME }}
         if [[ needs.check.outputs.TESTNAME == rs ]]; then
             echo "TESTFOLDER=resource-server" >> $GITHUB_ENV
             cp -r K8s-deployment/Charts/resource-server/example-secrets/* K8s-deployment/Charts/resource-server/
