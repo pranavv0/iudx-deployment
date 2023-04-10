@@ -99,7 +99,7 @@ jobs:
       run: |
         #!/bin/bash
         echo ${{ needs.check.outputs.TESTNAME }}
-        if [[ needs.check.outputs.TESTNAME == rs ]]; then
+        if [[ "${{ needs.check.outputs.TESTNAME }}" == "rs" ]]; then
             echo "TESTFOLDER=resource-server" >> $GITHUB_ENV
             cp -r K8s-deployment/Charts/resource-server/example-secrets/* K8s-deployment/Charts/resource-server/
             echo "${{ secrets.RS_RESOURCE_VALUES }}" > K8s-deployment/Charts/resource-server/resource-values.yaml
@@ -108,26 +108,26 @@ jobs:
             echo "${{ secrets.RS_CONFIG }}" | base64 --decode > K8s-deployment/Charts/resource-server/secrets/config.json
             echo "${{ secrets.RS_TEST_CONFIG }}" | base64 --decode > rs_test_config.json
             kubectl create secret generic rs-s3-env --from-file=K8s-deployment/Charts/resource-server/secrets/AWS_ACCESS_KEY_ID --from-file=K8s-deployment/Charts/resource-server/secrets/AWS_SECRET_ACCESS_KEY -n rs-test
-        elif [[ needs.check.outputs.TESTNAME == "cat" ]]; then
+        elif [[ "needs.check.outputs.TESTNAME" == "cat" ]]; then
             echo "TESTFOLDER=catalogue" >> $GITHUB_ENV
             cp -r K8s-deployment/Charts/catalogue/example-secrets/* K8s-deployment/Charts/catalogue/
             echo "${{ secrets.CAT_RESOURCE_VALUES }}" > K8s-deployment/Charts/catalogue/resource-values.yaml
             echo "${{ secrets.CAT_CONFIG }}" | base64 --decode > K8s-deployment/Charts/catalogue/secrets/config.json
             echo "${{ secrets.CAT_TEST_CONFIG }}" | base64 --decode > cat_test_config.json
-        elif [[ needs.check.outputs.TESTNAME == "fs" ]]; then
+        elif [[ "needs.check.outputs.TESTNAME" == "fs" ]]; then
             echo "TESTFOLDER=file-server" >> $GITHUB_ENV
             cp -r K8s-deployment/Charts/file-server/example-secrets/* K8s-deployment/Charts/file-server/
             echo "${{ secrets.FS_RESOURCE_VALUES }}" > K8s-deployment/Charts/file-server/resource-values.yaml
             echo "${{ secrets.FS_CONFIG }}" | base64 --decode > K8s-deployment/Charts/file-server/secrets/config.json
             echo "${{ secrets.FS_TEST_CONFIG }}" | base64 --decode > fs_test_config.json
-        elif [[ needs.check.outputs.TESTNAME == "gis" ]]; then
+        elif [[ "needs.check.outputs.TESTNAME" == "gis" ]]; then
             echo "TESTFOLDER=gis-interface" >> $GITHUB_ENV
             cp -r K8s-deployment/Charts/gis-interface/example-secrets/* K8s-deployment/Charts/gis-interface/
             echo "${{ secrets.GIS_RESOURCE_VALUES }}" > K8s-deployment/Charts/gis-interface/resource-values.yaml
             echo "${{ secrets.GIS_CONFIG }}" | base64 --decode > K8s-deployment/Charts/gis-interface/secrets/config.json
             echo "${{ secrets.GIS_TEST_CONFIG }}" | base64 --decode > gis_test_config.json
 
-        elif [[ needs.check.outputs.TESTNAME == "di" ]]; then
+        elif [[ "needs.check.outputs.TESTNAME" == "di" ]]; then
             echo "TESTFOLDER=data-ingestion" >> $GITHUB_ENV
             cp -r K8s-deployment/Charts/data-ingestion/example-secrets/* K8s-deployment/Charts/data-ingestion/
             echo "${{ secrets.DI_RESOURCE_VALUES }}" > K8s-deployment/Charts/data-ingestion/resource-values.yaml
