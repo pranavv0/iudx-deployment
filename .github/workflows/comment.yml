@@ -143,6 +143,9 @@ jobs:
       run: |
         cd K8s-deployment/Charts/${{ env.TESTFOLDER }}/
         kubectl create ns ${{ needs.check.outputs.TESTNAME }}-test
+        if [[ "${{ needs.check.outputs.TESTNAME }}" == "rs" ]]; then
+          kubectl create secret generic rs-s3-env --from-file=K8s-deployment/Charts/resource-server/secrets/AWS_ACCESS_KEY_ID --from-file=K8s-deployment/Charts/resource-server/secrets/AWS_SECRET_ACCESS_KEY -n rs-test
+        fi
         kubectl create configmap ${{ needs.check.outputs.TESTNAME }}-env --from-env-file=./secrets/.${{ needs.check.outputs.TESTNAME }}.env -n ${{ needs.check.outputs.TESTNAME }}-test
         kubectl create secret generic ${{ needs.check.outputs.TESTNAME }}-config --from-file=./secrets/config.json -n ${{ needs.check.outputs.TESTNAME }}-test
         helm install ${{ env.TESTFOLDER }} ../${{ env.TESTFOLDER }} -f values.yaml -f resource-values.yaml -n ${{ needs.check.outputs.TESTNAME }}-test
