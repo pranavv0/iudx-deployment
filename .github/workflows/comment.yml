@@ -118,7 +118,7 @@ jobs:
         echo "${{ secrets.${{ needs.check.outputs.TESTNAME }}_TEST_CONFIG }}" | base64 --decode > ${{ needs.check.outputs.TESTNAME }}_test_config.json
     
     - name: Resource Server
-      if: ${{ needs.check.outputs.TESTNAME == "rs" }}
+      if: needs.check.outputs.TESTNAME == "rs"
       run: |
         echo -n "${{ secrets.AWS_ACCESS_KEY_ID }}" > K8s-deployment/Charts/resource-server/secrets/AWS_ACCESS_KEY_ID
         echo -n "${{ secrets.AWS_SECRET_ACCESS_KEY }}"  > K8s-deployment/Charts/resource-server/secrets/AWS_SECRET_ACCESS_KEY
