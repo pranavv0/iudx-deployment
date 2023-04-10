@@ -114,7 +114,7 @@ jobs:
       run: |
         testname=${{ needs.check.outputs.TESTNAME }}
         cp -r K8s-deployment/Charts/${{ env.TESTFOLDER }}/example-secrets/* K8s-deployment/Charts/${{ env.TESTFOLDER }}/
-        echo "${{ secrets[$testname_RESOURCE_VALUES]}}" > K8s-deployment/Charts/${{ env.TESTFOLDER }}/resource-values.yaml
+        echo "${{ secrets[testname + '_RESOURCE_VALUES']}}" > K8s-deployment/Charts/${{ env.TESTFOLDER }}/resource-values.yaml
         echo "${{ secrets.${{ needs.check.outputs.TESTNAME }}_CONFIG }}" | base64 --decode > K8s-deployment/Charts/${{ env.TESTFOLDER }}/secrets/config.json
         echo "${{ secrets.${{ needs.check.outputs.TESTNAME }}_TEST_CONFIG }}" | base64 --decode > ${{ needs.check.outputs.TESTNAME }}_test_config.json
     
