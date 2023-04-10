@@ -28,7 +28,7 @@ jobs:
             # The comment matches one of the defined comments, so run the desired command
             echo "The comment matches \"$i\""
             echo "RESULT=TRUE" >> $GITHUB_ENV
-            echo "TESTNAME=$(echo $i | cut -d "_" -f 2-)" >> $GITHUB_OUTPUT
+            echo "TESTNAME=\"$(echo $i | cut -d "_" -f 2-)"\" >> $GITHUB_OUTPUT
             break
           fi
         done
