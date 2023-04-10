@@ -68,7 +68,9 @@ jobs:
         echo "REF=$(echo $output | jq -r '.head.ref')" >> $GITHUB_ENV       
         
     
-
+    - name: check
+      run: |
+        echo ${{ needs.check.outputs.TESTNAME }}
 
     - name: Checkout PR API
       uses: actions/checkout@v3
