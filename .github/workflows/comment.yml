@@ -61,12 +61,7 @@ jobs:
         output=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.issue.number }} )
         echo "OWNER=$(echo $output | jq -r '.head.repo.owner.login')" >> $GITHUB_ENV
         echo "REPO=$(echo $output | jq -r '.head.repo.name')" >> $GITHUB_ENV
-        echo "REF=$(echo $output | jq -r '.head.ref')" >> $GITHUB_ENV       
-        
-    
-    - name: check
-      run: |
-        echo ${{ needs.check.outputs.TESTNAME }}
+        echo "REF=$(echo $output | jq -r '.head.ref')" >> $GITHUB_ENV
 
     - name: Checkout PR API
       uses: actions/checkout@v3
