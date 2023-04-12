@@ -55,7 +55,7 @@ jobs:
     needs: check
     runs-on: ubuntu-latest
     env:
-        GITHUB_TOKEN: ${{ secrets.TOKEN }}
+        GITHUB_TOKEN: ${{ github.token }}
     if: needs.check.outputs.PERMISSIONS =='granted'
   
     steps: 
