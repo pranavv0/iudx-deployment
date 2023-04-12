@@ -6,8 +6,6 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
-    env:
-        GITHUB_TOKEN: ${{ github.token }}
     if: startsWith(github.event.comment.body, '/test_') && github.event.issue.pull_request != null
     outputs:
       PERMISSIONS: ${{ steps.user_access.outputs.PERMISSIONS }}
