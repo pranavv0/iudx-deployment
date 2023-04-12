@@ -37,7 +37,7 @@ jobs:
       run: |      
         #!/bin/bash
         # Get the permissions of the user who created the comment
-        PERMISSIONS=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/repos/${{ github.repository }}/collaborators/${{ github.event.comment.user.login }}/permission" | jq -r ".permission")
+        PERMISSIONS=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/${{ github.repository }}/collaborators/${{ github.event.comment.user.login }}/permission" | jq -r ".permission")
         # Check if the user has write permission
         if [ "$PERMISSIONS" == "write" ] || [ "$PERMISSIONS" == "admin" ]; then
           echo "User has permission"
