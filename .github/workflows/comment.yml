@@ -92,7 +92,7 @@ jobs:
     - name: Install Helm
       uses: azure/setup-helm@v3
       with:
-         token: ${{ env.GITHUB_TOKEN }}
+         token: ${{ github.token }}
 
     - name: Configure Server
       id: details
