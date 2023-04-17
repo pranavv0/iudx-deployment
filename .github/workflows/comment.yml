@@ -135,13 +135,13 @@ jobs:
         #!/bin/bash
         set -x
         cd K8s-deployment/Charts/${{ env.TESTFOLDER }}/
-        kubectl create ns ${{ needs.check.outputs.TESTNAME }}-test
+        kubectl create ns test-apis
         if [[ "${{ needs.check.outputs.TESTNAME }}" == "rs" ]]; then
-          kubectl create secret generic rs-s3-env --from-file=./secrets/AWS_ACCESS_KEY_ID --from-file=./secrets/AWS_SECRET_ACCESS_KEY -n rs-test
+          kubectl create secret generic rs-s3-env --from-file=./secrets/AWS_ACCESS_KEY_ID --from-file=./secrets/AWS_SECRET_ACCESS_KEY -n test-apis
         fi
-        kubectl create configmap ${{ needs.check.outputs.TESTNAME }}-env --from-env-file=./secrets/.${{ needs.check.outputs.TESTNAME }}.env -n ${{ needs.check.outputs.TESTNAME }}-test
-        kubectl create secret generic ${{ needs.check.outputs.TESTNAME }}-config --from-file=./secrets/config.json -n ${{ needs.check.outputs.TESTNAME }}-test
-        helm install ${{ env.TESTFOLDER }} ../${{ env.TESTFOLDER }} -f values.yaml -f resource-values.yaml -n ${{ needs.check.outputs.TESTNAME }}-test
+        kubectl create configmap ${{ needs.check.outputs.TESTNAME }}-env --from-env-file=./secrets/.${{ needs.check.outputs.TESTNAME }}.env -n test-apis
+        kubectl create secret generic ${{ needs.check.outputs.TESTNAME }}-config --from-file=./secrets/config.json -n test-apis
+        helm install ${{ env.TESTFOLDER }} ../${{ env.TESTFOLDER }} -f values.yaml -f resource-values.yaml -n test-apis
     
             
     - name: Install Testkube
@@ -177,5 +177,5 @@ jobs:
         
     - name: Delete deployment
       run: |
-       kubectl delete ns ${{ needs.check.outputs.TESTNAME }}-test 
+       kubectl delete ns test-apis 
        testkube  delete executor pytest-executor-gh
