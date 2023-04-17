@@ -163,7 +163,7 @@ jobs:
       run: |
         #!/bin/bash
         set -x
-        sleep 2m
+        sleep 4m
         execution_output=$(tk get execution --test ${{ env.test_name }} --output json)
         result_id=$(echo $execution_output | jq -r '.results[0].id')
         status=$(echo $execution_output | jq -r '.results[0].status')
