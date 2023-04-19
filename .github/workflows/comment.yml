@@ -176,7 +176,7 @@ jobs:
         
     - name: Delete deployment
       run: |
-       helm uninstall ${{ env.TESTFOLDER }}
+       helm uninstall ${{ env.TESTFOLDER }} -n test-apis
        kubectl delete secret --all -n test-apis
        kubectl delete configmap --all -n test-apis
        testkube  delete executor pytest-executor-gh
