@@ -135,7 +135,6 @@ jobs:
         #!/bin/bash
         set -x
         cd K8s-deployment/Charts/${{ env.TESTFOLDER }}/
-        kubectl create ns test-apis
         if [[ "${{ needs.check.outputs.TESTNAME }}" == "rs" ]]; then
           kubectl create secret generic rs-s3-env --from-file=./secrets/AWS_ACCESS_KEY_ID --from-file=./secrets/AWS_SECRET_ACCESS_KEY -n test-apis
         fi
@@ -159,7 +158,7 @@ jobs:
         testkube run test ${{ needs.check.outputs.TESTNAME }}-test-$datetime --download-artifacts
         echo "test_name=${{ needs.check.outputs.TESTNAME }}-test-$datetime" >> $GITHUB_ENV 
         
-    - name: Download Test reports
+    - name: Download Test reports 
       run: |
         #!/bin/bash
         set -x
@@ -177,5 +176,7 @@ jobs:
         
     - name: Delete deployment
       run: |
-       kubectl delete ns test-apis 
+       helm uninstall ${{ env.TESTFOLDER }}
+       kubectl delete secret --all -n test-apis
+       kubectl delete configmap --all -n test-apis
        testkube  delete executor pytest-executor-gh
