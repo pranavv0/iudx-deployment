@@ -16,7 +16,8 @@ jobs:
       run: |
         #!/bin/bash
         # Define the list of comments
-        comments=("/test_rs" "/test_cat" "/test_fs" "/test_di" "/test_gis" )
+        python3 --version
+        comments=("/test_rs" "/test_cat" "/test_fs" "/test_di" "/test_gis" "/test_lip")
         # Get the comment body from the event payload
         comment_body=$(jq -r ".comment.body" "$GITHUB_EVENT_PATH")
         # Check if the comment matches any of the defined comments
@@ -125,6 +126,13 @@ jobs:
             echo "${{ secrets.DI_RESOURCE_VALUES }}" > K8s-deployment/Charts/data-ingestion/resource-values.yaml
             echo "${{ secrets.DI_CONFIG }}" | base64 --decode > K8s-deployment/Charts/data-ingestion/secrets/config.json
             echo "${{ secrets.DI_TEST_CONFIG }}" | base64 --decode > di_test_config.json
+            
+        elif [[ "${{ needs.check.outputs.TESTNAME }}" == "lip" ]]; then
+            echo "TESTFOLDER=latest-ingestion-pipeline" >> $GITHUB_ENV
+            cp -r K8s-deployment/Charts/data-ingestion/example-secrets/* K8s-deployment/Charts/latest-ingestion-pipeline/
+            echo "${{ secrets.LIP_RESOURCE_VALUES }}" > K8s-deployment/Charts/latest-ingestion-pipeline/resource-values.yaml
+            echo "${{ secrets.LIP_CONFIG }}" | base64 --decode > K8s-deployment/Charts/latest-ingestion-pipeline/secrets/config.json
+            echo "${{ secrets.LIP_TEST_CONFIG }}" | base64 --decode > lip_test_config.json
         else
             echo "Invalid input"
             exit 1
