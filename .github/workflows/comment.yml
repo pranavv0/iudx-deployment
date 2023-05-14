@@ -163,7 +163,7 @@ jobs:
       run: |
         #!/bin/bash
         set -x
-        sleep 2m
+        sleep 2.5m
         if [[ "${{ needs.check.outputs.TESTNAME }}" == "lip" ]]; then
           pytest test_lip.py -k test_test --html=artifacts/report.html
         else
