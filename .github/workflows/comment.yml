@@ -132,7 +132,10 @@ jobs:
             cp -r K8s-deployment/Charts/data-ingestion/example-secrets/* K8s-deployment/Charts/latest-ingestion-pipeline/
             echo "${{ secrets.LIP_RESOURCE_VALUES }}" > K8s-deployment/Charts/latest-ingestion-pipeline/resource-values.yaml
             echo "${{ secrets.LIP_CONFIG }}" | base64 --decode > K8s-deployment/Charts/latest-ingestion-pipeline/secrets/config.json
-            echo "${{ secrets.LIP_TEST_CONFIG }}" | base64 --decode > lip_test_config.json
+            echo "${{ secrets.LIP_TEST_SCRIPT }}" | base64 --decode > test_lip.py
+            echo "${{ secrets.LIP_TEST_REQ }}"  > requirements.txt
+            pip3 install -r requirements.txt
+            pytest test_lip.py -k test_configuration
         else
             echo "Invalid input"
             exit 1
@@ -152,21 +155,26 @@ jobs:
     
             
     - name: Install Testkube
+      if: ${{ needs.check.outputs.TESTNAME != 'lip' }}
       run: |
         wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add - && echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list && sudo apt-get update && sudo apt-get install -y testkube
         
-    - name: Test Execute
+    - name: Test
       run: |
         #!/bin/bash
-        sleep 2m
         set -x
-        datetime=$(date +"%Y-%m-%d-%H-%M-%S")
-        testkube create executor --name pytest-executor-gh --namespace testkube --types pytest-executor-gh1/test-gh-1 --executor-type container --image docker.io/pranav0/testkube-executor-pytest:1.0.9 --command "pytest" --command "test_${{ needs.check.outputs.TESTNAME }}.py" --command "--html=/share/test/reports/report.html" --feature artifacts --content-type string
-        testkube create test --name "${{ needs.check.outputs.TESTNAME }}-test-$datetime" --namespace testkube --file  ${{ needs.check.outputs.TESTNAME }}_test_config.json --type pytest-executor-gh1/test-gh-1 --artifact-storage-class-name azuredisk-storage-class --artifact-volume-mount-path /share --artifact-dir test/reports
-        testkube run test ${{ needs.check.outputs.TESTNAME }}-test-$datetime --download-artifacts
-        echo "test_name=${{ needs.check.outputs.TESTNAME }}-test-$datetime" >> $GITHUB_ENV 
-        
+        if [[ "${{ needs.check.outputs.TESTNAME }}" == "lip" ]]; then
+          pytest test_lip.py -k test_test --html=artifacts/report.html
+        else
+          datetime=$(date +"%Y-%m-%d-%H-%M-%S")
+          testkube create executor --name pytest-executor-gh --namespace testkube --types pytest-executor-gh1/test-gh-1 --executor-type container --image docker.io/pranav0/testkube-executor-pytest:1.0.9 --command "pytest" --command "test_${{ needs.check.outputs.TESTNAME }}.py" --command "--html=/share/test/reports/report.html" --feature artifacts --content-type string
+          testkube create test --name "${{ needs.check.outputs.TESTNAME }}-test-$datetime" --namespace testkube --file  ${{ needs.check.outputs.TESTNAME }}_test_config.json --type pytest-executor-gh1/test-gh-1 --artifact-storage-class-name azuredisk-storage-class --artifact-volume-mount-path /share --artifact-dir test/reports
+          testkube run test ${{ needs.check.outputs.TESTNAME }}-test-$datetime --download-artifacts
+          echo "test_name=${{ needs.check.outputs.TESTNAME }}-test-$datetime" >> $GITHUB_ENV 
+        fi
+
     - name: Download Test reports 
+      if: ${{ needs.check.outputs.TESTNAME != 'lip' }}
       run: |
         #!/bin/bash
         set -x
@@ -189,7 +197,10 @@ jobs:
     - name: Delete deployment
       if: always()
       run: |
+       #!/bin/bash
        helm uninstall ${{ env.TESTFOLDER }} -n test-apis
        kubectl delete secret --all -n test-apis
        kubectl delete configmap --all -n test-apis
-       testkube  delete executor pytest-executor-gh
+       if: ${{ needs.check.outputs.TESTNAME != 'lip' }}
+         testkube  delete executor pytest-executor-gh
+       fi
