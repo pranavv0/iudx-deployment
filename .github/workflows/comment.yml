@@ -129,7 +129,7 @@ jobs:
             
         elif [[ "${{ needs.check.outputs.TESTNAME }}" == "lip" ]]; then
             echo "TESTFOLDER=latest-ingestion-pipeline" >> $GITHUB_ENV
-            cp -r K8s-deployment/Charts/data-ingestion/example-secrets/* K8s-deployment/Charts/latest-ingestion-pipeline/
+            cp -r K8s-deployment/Charts/latest-ingestion-pipeline/example-secrets/* K8s-deployment/Charts/latest-ingestion-pipeline/
             echo "${{ secrets.LIP_RESOURCE_VALUES }}" > K8s-deployment/Charts/latest-ingestion-pipeline/resource-values.yaml
             echo "${{ secrets.LIP_CONFIG }}" | base64 --decode > K8s-deployment/Charts/latest-ingestion-pipeline/secrets/config.json
             echo "${{ secrets.LIP_TEST_SCRIPT }}" | base64 --decode > test_lip.py
@@ -163,6 +163,7 @@ jobs:
       run: |
         #!/bin/bash
         set -x
+        sleep 2m
         if [[ "${{ needs.check.outputs.TESTNAME }}" == "lip" ]]; then
           pytest test_lip.py -k test_test --html=artifacts/report.html
         else
