@@ -1,11 +1,11 @@
 redis:
   resources:
     limits:
-      cpu: 1600m
-      memory: 3.5Gi
+      cpu: 1000m
+      memory: 2560Mi
     requests:
-      cpu: 1400m
-      memory: 3.5Gi
+      cpu: 800m
+      memory: 2560Mi
   ## @param redis.nodeSelector Node labels for Redis&trade; pods assignment
   ## ref: https://kubernetes.io/docs/user-guide/node-selection/
   ##
@@ -29,7 +29,7 @@ persistence:
   ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
   ##   GKE, AWS & OpenStack)
   ##
-  storageClass: "ebs-storage-class"
+  storageClass: "ebs-csi-storage-class"
   ## @param persistence.accessModes Persistent Volume Access Modes
   ##
   accessModes:

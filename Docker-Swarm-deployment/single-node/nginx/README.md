@@ -36,16 +36,6 @@
 
 
 # Install
-
-
-## Build nginx with [headers-more module](https://www.nginx.com/resources/wiki/modules/headers_more/)
-
-```sh
-docker build -f docker/Dockerfile --build-arg ENABLED_MODULES="headers-more" --build-arg  nginx_version=1.20 -t ghcr.io/datakaveri/nginx:1.20 docker/
-```
-The Dockerfile.alpine containing the building and including external module to nginx docker image is obtained [here](https://github.com/nginxinc/docker-nginx/tree/master/modules).
-
-
 ## Create secret files
 1. Make a copy of sample secrets directory.
 ```console
@@ -84,8 +74,13 @@ Define Appropriate values of resources -
 - PID limit 
 in `nginx-stack.resources.yaml`  for nginx as shown in sample resource-values file for [here](example-nginx-stack.resources.yaml)
 
-## Define domain names in configs
-For each nginx server configuration in conf/ (except for error.conf, default.conf file), substitute appropiate domain name next to ``server_name`` directive. 
+## Prepare nginx configs
+1. Make a copy of example-configs directory 
+```
+cp -r example-configs/conf .
+```
+
+2. For each nginx server configuration in conf/ (except for error.conf, default.conf file), substitute appropiate domain name next to ``server_name`` directive. 
 Example:- If resource server domain is ``rs.iudx.org.in`` , then susbitiute it in conf/rs.conf as follows :
 ```
         server_name         rs.iudx.org.in;

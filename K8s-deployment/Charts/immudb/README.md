@@ -20,7 +20,8 @@ To generate the passwords:
 ```
 # secrets directory after generation of secret files
 secrets/
-└── passwords/
+├── .config.env
+└── passwords
     ├── admin-password
     ├── auth-password
     ├── cat-password
@@ -122,7 +123,7 @@ kubectl delete pvc data-immudb-0 -n immudb
 | --------------------------- | ------------------------------------------ | -------------- |
 | `image.registry`            | image registry                             | `codenotary`   |
 | `image.repository`          | image repository                           | `immudb`       |
-| `image.tag`                 | image tag (immutable tags are recommended) | `1.4.0`        |
+| `image.tag`                 | image tag (immutable tags are recommended) | `1.4.1`        |
 | `image.pullPolicy`          | image pull policy                          | `IfNotPresent` |
 | `image.pullSecrets`         | image pull secrets                         | `{}`           |
 | `image.debug`               | Enable image debug mode                    | `false`        |

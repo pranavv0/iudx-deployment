@@ -2,10 +2,10 @@ postgresql:
   resources:
     limits:
        cpu: 1500m
-       memory: 3.5Gi
+       memory: 3584Mi
     requests:
        cpu: 1200m
-       memory: 3Gi
+       memory: 3072Mi
   maxConnections: 300
   nodeSelector:
     node.kubernetes.io/instance-type: t3.medium
@@ -61,9 +61,9 @@ pgpool:
     node.kubernetes.io/instance-type: t3.medium
 
 persistence:
-  storageClass: "ebs-storage-class"
+  storageClass: "ebs-csi-storage-class"
   accessModes:
     - ReadWriteOnce
-  size: 30Gi
+  size: 200Gi
 
 

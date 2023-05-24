@@ -72,7 +72,7 @@ diagnosticMode:
 image:
   registry: ghcr.io
   repository: datakaveri/cat-prod
-  tag: 4.5.0-alpha-5cdd89c
+  tag: 5.0.0-alpha-44b1c2a
   pullSecrets:
     ## Specify a imagePullPolicy
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -113,6 +113,8 @@ podAnnotations:
 ## @section ApiServer Parameters
 
 apiServer:
+  ## @param apiServer.enabled Enable apiServer Verticle for deployment
+  enabled: true
 
   ## @param apiServer.replicaCount Number of ApiServer replicas to deploy
 
@@ -181,7 +183,9 @@ apiServer:
   ## @param apiServer.podSecurityContext.fsGroup Set ApiServer pod's Security Context fsGroup
   ##
   podSecurityContext:
-    enabled: false
+    enabled: true
+    runAsNonRoot: true
+    runAsUser: 1001
     fsGroup: 1001
   ## Configure Container Security Context
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
@@ -190,9 +194,14 @@ apiServer:
   ## @param apiServer.containerSecurityContext.runAsNonRoot Set ApiServer containers' Security Context runAsNonRoot
   ##
   containerSecurityContext:
-    enabled: false
-    runAsUser: 1001
+    enabled: true
     runAsNonRoot: true
+    runAsUser: 1001
+    allowPrivilegeEscalation: false
+    capabilities:
+        drop:
+          - ALL
+    readOnlyRootFilesystem: true
    #%%OTHER_PARAMETERS_RELATED_TO_THIS_CONTAINER/POD%%
    ## @param apiServer.existingConfigmap The name of an existing ConfigMap with your custom configuration for ApiServer
   ##
@@ -291,11 +300,16 @@ apiServer:
     - name: cat-config
       secret:
         secretName: cat-config
+    - name: cat-tmp
+      emptyDir:
+        medium: Memory
   ## @param apiServer.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the ApiServer container(s)
   ##
   extraVolumeMounts: 
     - name: cat-config
       mountPath: /usr/share/app/secrets/configs
+    - name: cat-tmp
+      mountPath: /tmp
   
   ## @param apiServer.sidecars Add additional sidecar containers to the ApiServer pod(s)
   ## e.g:
@@ -334,7 +348,8 @@ apiServer:
 
 ## @section Auditing Parameters
 auditing:
-
+  ## @param auditing.enabled Enable auditing Verticle for deployment
+  enabled: true
   ## @param auditing.replicaCount Number of Auditing replicas to deploy
 
   replicaCount: 1
@@ -400,7 +415,9 @@ auditing:
   ## @param auditing.podSecurityContext.fsGroup Set Auditing pod's Security Context fsGroup
   ##
   podSecurityContext:
-    enabled: false
+    enabled: true
+    runAsNonRoot: true
+    runAsUser: 1001
     fsGroup: 1001
   ## Configure Container Security Context
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
@@ -409,9 +426,14 @@ auditing:
   ## @param auditing.containerSecurityContext.runAsNonRoot Set Auditing containers' Security Context runAsNonRoot
   ##
   containerSecurityContext:
-    enabled: false
-    runAsUser: 1001
+    enabled: true
     runAsNonRoot: true
+    runAsUser: 1001
+    allowPrivilegeEscalation: false
+    capabilities:
+        drop:
+          - ALL
+    readOnlyRootFilesystem: true
    #%%OTHER_PARAMETERS_RELATED_TO_THIS_CONTAINER/POD%%
    ## @param auditing.existingConfigmap The name of an existing ConfigMap with your custom configuration for Auditing
   ##
@@ -510,11 +532,16 @@ auditing:
     - name: cat-config
       secret:
         secretName: cat-config
+    - name: cat-tmp
+      emptyDir:
+        medium: Memory        
   ## @param auditing.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the Auditing container(s)
   ##
   extraVolumeMounts:
     - name: cat-config
       mountPath: /usr/share/app/secrets/configs
+    - name: cat-tmp
+      mountPath: /tmp
   
   ## @param auditing.sidecars Add additional sidecar containers to the Auditing pod(s)
   ## e.g:
@@ -553,7 +580,8 @@ auditing:
 
 ## @section Authenticator Parameters
 authenticator:
-
+  ## @param authenticator.enabled Enable authenticator Verticle for deployment
+  enabled: true
   ## @param authenticator.replicaCount Number of Authenticator replicas to deploy
 
   replicaCount: 1
@@ -619,7 +647,9 @@ authenticator:
   ## @param authenticator.podSecurityContext.fsGroup Set Authenticator pod's Security Context fsGroup
   ##
   podSecurityContext:
-    enabled: false
+    enabled: true
+    runAsNonRoot: true
+    runAsUser: 1001
     fsGroup: 1001
   ## Configure Container Security Context
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
@@ -628,9 +658,14 @@ authenticator:
   ## @param authenticator.containerSecurityContext.runAsNonRoot Set Authenticator containers' Security Context runAsNonRoot
   ##
   containerSecurityContext:
-    enabled: false
-    runAsUser: 1001
+    enabled: true
     runAsNonRoot: true
+    runAsUser: 1001
+    allowPrivilegeEscalation: false
+    capabilities:
+        drop:
+          - ALL
+    readOnlyRootFilesystem: true
    #%%OTHER_PARAMETERS_RELATED_TO_THIS_CONTAINER/POD%%
    ## @param authenticator.existingConfigmap The name of an existing ConfigMap with your custom configuration for Authenticator
   ##
@@ -730,13 +765,16 @@ authenticator:
     - name: cat-config
       secret:
         secretName: cat-config
-
+    - name: cat-tmp
+      emptyDir:
+        medium: Memory
   ## @param authenticator.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the Authenticator container(s)
   ##
   extraVolumeMounts:
     - name: cat-config
       mountPath: /usr/share/app/secrets/configs
-
+    - name: cat-tmp
+      mountPath: /tmp
   ## @param authenticator.sidecars Add additional sidecar containers to the Authenticator pod(s)
   ## e.g:
   ## sidecars:
@@ -774,7 +812,8 @@ authenticator:
 
 ## @section Database Parameters
 database:
-
+  ## @param database.enabled Enable database Verticle for deployment
+  enabled: true
   ## @param database.replicaCount Number of Database replicas to deploy
 
   replicaCount: 1
@@ -841,7 +880,9 @@ database:
   ## @param database.podSecurityContext.fsGroup Set Database pod's Security Context fsGroup
   ##
   podSecurityContext:
-    enabled: false
+    enabled: true
+    runAsNonRoot: true
+    runAsUser: 1001
     fsGroup: 1001
   ## Configure Container Security Context
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
@@ -850,9 +891,14 @@ database:
   ## @param database.containerSecurityContext.runAsNonRoot Set Database containers' Security Context runAsNonRoot
   ##
   containerSecurityContext:
-    enabled: false
-    runAsUser: 1001
+    enabled: true
     runAsNonRoot: true
+    runAsUser: 1001
+    allowPrivilegeEscalation: false
+    capabilities:
+        drop:
+          - ALL
+    readOnlyRootFilesystem: true
    #%%OTHER_PARAMETERS_RELATED_TO_THIS_CONTAINER/POD%%
    ## @param database.existingConfigmap The name of an existing ConfigMap with your custom configuration for Database
   ##
@@ -951,14 +997,17 @@ database:
     - name: cat-config
       secret:
         secretName: cat-config
-
+    - name: cat-tmp
+      emptyDir:
+        medium: Memory
     
   ## @param database.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the Database container(s)
   ##
   extraVolumeMounts: 
     - name: cat-config
       mountPath: /usr/share/app/secrets/configs
-  
+    - name: cat-tmp
+      mountPath: /tmp  
   ## @param database.sidecars Add additional sidecar containers to the Database pod(s)
   ## e.g:
   ## sidecars:
@@ -998,7 +1047,8 @@ database:
 ## @section Validator Parameters
 
 validator:
-
+  ## @param validator.enabled Enable validator Verticle for deployment
+  enabled: true
   ## @param validator.replicaCount Number of Validator replicas to deploy
 
   replicaCount: 1  
@@ -1064,7 +1114,9 @@ validator:
   ## @param validator.podSecurityContext.fsGroup Set Validator pod's Security Context fsGroup
   ##
   podSecurityContext:
-    enabled: false
+    enabled: true
+    runAsNonRoot: true
+    runAsUser: 1001
     fsGroup: 1001
   ## Configure Container Security Context
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
@@ -1073,9 +1125,14 @@ validator:
   ## @param validator.containerSecurityContext.runAsNonRoot Set Validator containers' Security Context runAsNonRoot
   ##
   containerSecurityContext:
-    enabled: false
-    runAsUser: 1001
+    enabled: true
     runAsNonRoot: true
+    runAsUser: 1001
+    allowPrivilegeEscalation: false
+    capabilities:
+        drop:
+          - ALL
+    readOnlyRootFilesystem: true
    #%%OTHER_PARAMETERS_RELATED_TO_THIS_CONTAINER/POD%%
    ## @param validator.existingConfigmap The name of an existing ConfigMap with your custom configuration for Validator
   ##
@@ -1174,13 +1231,16 @@ validator:
     - name: cat-config
       secret:
         secretName: cat-config
-
+    - name: cat-tmp
+      emptyDir:
+        medium: Memory
   ## @param validator.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the Validator container(s)
   ##
   extraVolumeMounts: 
     - name: cat-config
       mountPath: /usr/share/app/secrets/configs
-  
+    - name: cat-tmp
+      mountPath: /tmp  
   ## @param validator.sidecars Add additional sidecar containers to the Validator pod(s)
   ## e.g:
   ## sidecars:
@@ -1219,7 +1279,8 @@ validator:
 ## @section geocoding Parameters
 
 geocoding:
-
+  ## @param geocoding.enabled Enable geocoding Verticle for deployment
+  enabled: true
   ## @param geocoding.replicaCount Number of geocoding replicas to deploy
 
   replicaCount: 1  
@@ -1285,7 +1346,9 @@ geocoding:
   ## @param geocoding.podSecurityContext.fsGroup Set geocoding pod's Security Context fsGroup
   ##
   podSecurityContext:
-    enabled: false
+    enabled: true
+    runAsNonRoot: true
+    runAsUser: 1001
     fsGroup: 1001
   ## Configure Container Security Context
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
@@ -1294,9 +1357,14 @@ geocoding:
   ## @param geocoding.containerSecurityContext.runAsNonRoot Set geocoding containers' Security Context runAsNonRoot
   ##
   containerSecurityContext:
-    enabled: false
-    runAsUser: 1001
+    enabled: true
     runAsNonRoot: true
+    runAsUser: 1001
+    allowPrivilegeEscalation: false
+    capabilities:
+        drop:
+          - ALL
+    readOnlyRootFilesystem: true
    #%%OTHER_PARAMETERS_RELATED_TO_THIS_CONTAINER/POD%%
    ## @param geocoding.existingConfigmap The name of an existing ConfigMap with your custom configuration for geocoding
   ##
@@ -1395,13 +1463,16 @@ geocoding:
     - name: cat-config
       secret:
         secretName: cat-config
-
+    - name: cat-tmp
+      emptyDir:
+        medium: Memory
   ## @param geocoding.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the geocoding container(s)
   ##
   extraVolumeMounts: 
     - name: cat-config
       mountPath: /usr/share/app/secrets/configs
-  
+    - name: cat-tmp
+      mountPath: /tmp  
   ## @param geocoding.sidecars Add additional sidecar containers to the geocoding pod(s)
   ## e.g:
   ## sidecars:
@@ -1440,7 +1511,8 @@ geocoding:
 ## @section nlpSearch Parameters
 
 nlpSearch:
-
+  ## @param nlpSearch.enabled Enable nlpSearch Verticle for deployment
+  enabled: true
   ## @param nlpSearch.replicaCount Number of nlpSearch replicas to deploy
 
   replicaCount: 1  
@@ -1506,7 +1578,9 @@ nlpSearch:
   ## @param nlpSearch.podSecurityContext.fsGroup Set nlpSearch pod's Security Context fsGroup
   ##
   podSecurityContext:
-    enabled: false
+    enabled: true
+    runAsNonRoot: true
+    runAsUser: 1001
     fsGroup: 1001
   ## Configure Container Security Context
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
@@ -1515,9 +1589,14 @@ nlpSearch:
   ## @param nlpSearch.containerSecurityContext.runAsNonRoot Set nlpSearch containers' Security Context runAsNonRoot
   ##
   containerSecurityContext:
-    enabled: false
-    runAsUser: 1001
+    enabled: true
     runAsNonRoot: true
+    runAsUser: 1001
+    allowPrivilegeEscalation: false
+    capabilities:
+        drop:
+          - ALL
+    readOnlyRootFilesystem: true
    #%%OTHER_PARAMETERS_RELATED_TO_THIS_CONTAINER/POD%%
    ## @param nlpSearch.existingConfigmap The name of an existing ConfigMap with your custom configuration for nlpSearch
   ##
@@ -1616,13 +1695,16 @@ nlpSearch:
     - name: cat-config
       secret:
         secretName: cat-config
-
+    - name: cat-tmp
+      emptyDir:
+        medium: Memory
   ## @param nlpSearch.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the nlpSearch container(s)
   ##
   extraVolumeMounts: 
     - name: cat-config
       mountPath: /usr/share/app/secrets/configs
-  
+    - name: cat-tmp
+      mountPath: /tmp  
   ## @param nlpSearch.sidecars Add additional sidecar containers to the nlpSearch pod(s)
   ## e.g:
   ## sidecars:
@@ -1659,7 +1741,8 @@ nlpSearch:
     targetMemory:
 ## @section Rating Parameters
 rating:
-
+  ## @param rating.enabled Enable rating Verticle for deployment
+  enabled: true
   ## @param rating.replicaCount Number of Rating replicas to deploy
 
   replicaCount: 1  
@@ -1725,7 +1808,9 @@ rating:
   ## @param rating.podSecurityContext.fsGroup Set Rating pod's Security Context fsGroup
   ##
   podSecurityContext:
-    enabled: false
+    enabled: true
+    runAsNonRoot: true
+    runAsUser: 1001
     fsGroup: 1001
   ## Configure Container Security Context
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
@@ -1734,9 +1819,14 @@ rating:
   ## @param rating.containerSecurityContext.runAsNonRoot Set Rating containers' Security Context runAsNonRoot
   ##
   containerSecurityContext:
-    enabled: false
-    runAsUser: 1001
+    enabled: true
     runAsNonRoot: true
+    runAsUser: 1001
+    allowPrivilegeEscalation: false
+    capabilities:
+        drop:
+          - ALL
+    readOnlyRootFilesystem: true
    #%%OTHER_PARAMETERS_RELATED_TO_THIS_CONTAINER/POD%%
    ## @param rating.existingConfigmap The name of an existing ConfigMap with your custom configuration for Rating
   ##
@@ -1835,13 +1925,16 @@ rating:
     - name: cat-config
       secret:
         secretName: cat-config
-
+    - name: cat-tmp
+      emptyDir:
+        medium: Memory
   ## @param rating.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the Rating container(s)
   ##
   extraVolumeMounts: 
     - name: cat-config
       mountPath: /usr/share/app/secrets/configs
-  
+    - name: cat-tmp
+      mountPath: /tmp  
   ## @param rating.sidecars Add additional sidecar containers to the Rating pod(s)
   ## e.g:
   ## sidecars:
@@ -1879,7 +1972,8 @@ rating:
 
 ## @section Databroker Parameters
 databroker:
-
+  ## @param databroker.enabled Enable databroker Verticle for deployment
+  enabled: true
   ## @param databroker.replicaCount Number of Databroker replicas to deploy
 
   replicaCount: 1  
@@ -1945,7 +2039,9 @@ databroker:
   ## @param databroker.podSecurityContext.fsGroup Set Databroker pod's Security Context fsGroup
   ##
   podSecurityContext:
-    enabled: false
+    enabled: true
+    runAsNonRoot: true
+    runAsUser: 1001
     fsGroup: 1001
   ## Configure Container Security Context
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
@@ -1954,9 +2050,14 @@ databroker:
   ## @param databroker.containerSecurityContext.runAsNonRoot Set Databroker containers' Security Context runAsNonRoot
   ##
   containerSecurityContext:
-    enabled: false
-    runAsUser: 1001
+    enabled: true
     runAsNonRoot: true
+    runAsUser: 1001
+    allowPrivilegeEscalation: false
+    capabilities:
+        drop:
+          - ALL
+    readOnlyRootFilesystem: true
    #%%OTHER_PARAMETERS_RELATED_TO_THIS_CONTAINER/POD%%
    ## @param databroker.existingConfigmap The name of an existing ConfigMap with your custom configuration for Databroker
   ##
@@ -2055,13 +2156,16 @@ databroker:
     - name: cat-config
       secret:
         secretName: cat-config
-
+    - name: cat-tmp
+      emptyDir:
+        medium: Memory
   ## @param databroker.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the Databroker container(s)
   ##
   extraVolumeMounts: 
     - name: cat-config
       mountPath: /usr/share/app/secrets/configs
-  
+    - name: cat-tmp
+      mountPath: /tmp  
   ## @param databroker.sidecars Add additional sidecar containers to the Databroker pod(s)
   ## e.g:
   ## sidecars:
@@ -2099,7 +2203,8 @@ databroker:
 
 ## @section ProfanityCheckSdk Parameters
 profanityCheckSdk:
-
+  ## @param profanityCheckSdk.enabled Enable databroker Verticle for deployment
+  enabled: true
   image:
     registry: ghcr.io
     repository: datakaveri/profanity-check-sdk
@@ -2186,7 +2291,9 @@ profanityCheckSdk:
   ## @param profanityCheckSdk.podSecurityContext.fsGroup Set ProfanityCheckSdk pod's Security Context fsGroup
   ##
   podSecurityContext:
-    enabled: false
+    enabled: true
+    runAsNonRoot: true
+    runAsUser: 1001
     fsGroup: 1001
   ## Configure Container Security Context
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
@@ -2195,9 +2302,14 @@ profanityCheckSdk:
   ## @param profanityCheckSdk.containerSecurityContext.runAsNonRoot Set ProfanityCheckSdk containers' Security Context runAsNonRoot
   ##
   containerSecurityContext:
-    enabled: false
-    runAsUser: 1001
+    enabled: true
     runAsNonRoot: true
+    runAsUser: 1001
+    allowPrivilegeEscalation: false
+    capabilities:
+        drop:
+          - ALL
+    readOnlyRootFilesystem: true
    #%%OTHER_PARAMETERS_RELATED_TO_THIS_CONTAINER/POD%%
    ## @param profanityCheckSdk.existingConfigmap The name of an existing ConfigMap with your custom configuration for ProfanityCheckSdk
   ##
@@ -2306,7 +2418,7 @@ profanityCheckSdk:
     - name: profanity-check-config
       mountPath: /usr/share/app/config.json
       subPath: config.json
-  
+ 
   ## @param profanityCheckSdk.sidecars Add additional sidecar containers to the ProfanityCheckSdk pod(s)
   ## e.g:
   ## sidecars:
@@ -2335,6 +2447,468 @@ profanityCheckSdk:
   ## @param profanityCheckSdk.autoscaling.maxReplicas Maximum number of Apache replicas
   ## @param profanityCheckSdk.autoscaling.targetCPU Target CPU utilization percentage
   ## @param profanityCheckSdk.autoscaling.targetMemory Target Memory utilization percentage
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPU: 80
+    targetMemory:
+
+## @section mlayer Parameters
+mlayer:
+  ## @param mlayer.enabled Enable mlayer Verticle for deployment
+  enabled: true
+  ## @param mlayer.replicaCount Number of mlayer replicas to deploy
+
+  replicaCount: 1  
+  ## Configure extra options for mlayer containers' liveness and readiness probes
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
+  ## @param mlayer.livenessProbe.enabled Enable livenessProbe on mlayer containers
+  ## @param mlayer.livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
+  ## @param mlayer.livenessProbe.periodSeconds Period seconds for livenessProbe
+  ## @param mlayer.livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
+  ## @param mlayer.livenessProbe.failureThreshold Failure threshold for livenessProbe
+  ## @param mlayer.livenessProbe.successThreshold Success threshold for livenessProbe
+  ## @param mlayer.livenessProbe.path Path for httpGet
+  ##
+  livenessProbe:
+    enabled: true
+    path: /metrics
+    initialDelaySeconds: 60
+    periodSeconds: 60
+    timeoutSeconds: 10
+    #failureThreshold: 10
+    #successThreshold: 10
+  ## @param mlayer.readinessProbe.enabled Enable readinessProbe on mlayer containers
+  ## @param mlayer.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
+  ## @param mlayer.readinessProbe.periodSeconds Period seconds for readinessProbe
+  ## @param mlayer.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
+  ## @param mlayer.readinessProbe.failureThreshold Failure threshold for readinessProbe
+  ## @param mlayer.readinessProbe.successThreshold Success threshold for readinessProbe
+  ##
+  readinessProbe:
+    enabled: false
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 10
+    failureThreshold: 10
+    successThreshold: 10
+  ## @param mlayer.startupProbe.enabled Enable startupProbe on mlayer containers
+  ## @param mlayer.startupProbe.initialDelaySeconds Initial delay seconds for startupProbe
+  ## @param mlayer.startupProbe.periodSeconds Period seconds for startupProbe
+  ## @param mlayer.startupProbe.timeoutSeconds Timeout seconds for startupProbe
+  ## @param mlayer.startupProbe.failureThreshold Failure threshold for startupProbe
+  ## @param mlayer.startupProbe.successThreshold Success threshold for startupProbe
+  ##
+  startupProbe:
+    enabled: false
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 10
+    failureThreshold: 10
+    successThreshold: 10
+  ## @param mlayer.customLivenessProbe Custom livenessProbe that overrides the default one
+  ##
+  customLivenessProbe: {}
+  ## @param mlayer.customReadinessProbe Custom readinessProbe that overrides the default one
+  ##
+  customReadinessProbe: {}
+  ## @param mlayer.customStartupProbe Custom startupProbe that overrides the default one
+  ##
+  customStartupProbe: {}
+
+  ## Configure Pods Security Context
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+  ## @param mlayer.podSecurityContext.enabled Enabled mlayer pods' Security Context
+  ## @param mlayer.podSecurityContext.fsGroup Set mlayer pod's Security Context fsGroup
+  ##
+  podSecurityContext:
+    enabled: true
+    runAsNonRoot: true
+    runAsUser: 1001
+    fsGroup: 1001
+  ## Configure Container Security Context
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+  ## @param mlayer.containerSecurityContext.enabled Enabled mlayer containers' Security Context
+  ## @param mlayer.containerSecurityContext.runAsUser Set mlayer containers' Security Context runAsUser
+  ## @param mlayer.containerSecurityContext.runAsNonRoot Set mlayer containers' Security Context runAsNonRoot
+  ##
+  containerSecurityContext:
+    enabled: true
+    runAsNonRoot: true
+    runAsUser: 1001
+    allowPrivilegeEscalation: false
+    capabilities:
+        drop:
+          - ALL
+    readOnlyRootFilesystem: true
+   #%%OTHER_PARAMETERS_RELATED_TO_THIS_CONTAINER/POD%%
+   ## @param mlayer.existingConfigmap The name of an existing ConfigMap with your custom configuration for mlayer
+  ##
+  existingConfigmap:
+    
+  ## @param mlayer.command Override default container command (useful when using custom images)
+  ##
+  command: ["/bin/bash"]
+  ## @param mlayer.args Override default container args (useful when using custom images)
+  ##
+  args: ["-c","exec java  -Xmx1024m -Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.Log4j2LogDelegateFactory   -jar ./fatjar.jar  --host $$MY_POD_IP -c secrets/configs/config.json -m iudx.catalogue.server.mlayer.MlayerVerticle"]  
+  ## @param mlayer.hostAliases mlayer pods host aliases
+  ## https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
+  ##
+  hostAliases: []
+  ## @param mlayer.podLabels Extra labels for mlayer pods
+  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+  ##
+  podLabels: {}
+ 
+  ##
+  ## @param mlayer.podAffinityPreset Pod affinity preset. Ignored if `mlayer.affinity` is set. Allowed values: `soft` or `hard`
+  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+  ##
+  podAffinityPreset: ""
+  ## @param mlayer.podAntiAffinityPreset Pod anti-affinity preset. Ignored if `mlayer.affinity` is set. Allowed values: `soft` or `hard`
+  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+  ##
+  podAntiAffinityPreset: ""
+  ## Node mlayer.affinity preset
+  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity
+  ##
+  nodeAffinityPreset:
+    ## @param mlayer.nodeAffinityPreset.type Node affinity preset type. Ignored if `mlayer.affinity` is set. Allowed values: `soft` or `hard`
+    ##
+    type: ""
+    ## @param mlayer.nodeAffinityPreset.key Node label key to match. Ignored if `mlayer.affinity` is set
+    ##
+    key: ""
+    ## @param mlayer.nodeAffinityPreset.values Node label values to match. Ignored if `mlayer.affinity` is set
+    ## E.g.
+    ## values:
+    ##   - e2e-az1
+    ##   - e2e-az2
+    ##
+    values: []
+  ## @param mlayer.affinity Affinity for mlayer pods assignment
+  ## ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+  ## NOTE: `mlayer.podAffinityPreset`, `mlayer.podAntiAffinityPreset`, and `mlayer.nodeAffinityPreset` will be ignored when it's set
+  ##
+  affinity: {}
+  ## @param mlayer.nodeSelector Node labels for mlayer pods assignment
+  ## ref: https://kubernetes.io/docs/user-guide/node-selection/
+  ##
+  nodeSelector:
+
+
+  ## @param mlayer.tolerations Tolerations for mlayer pods assignment
+  ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+  ##
+  tolerations: []
+  ## @param mlayer.updateStrategy.type mlayer statefulset strategy type
+  ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
+  ##
+  updateStrategy:
+    ## StrategyType
+    ## Can be set to RollingUpdate or OnDelete
+    ##
+    ##type: RollingUpdate
+  ## @param mlayer.priorityClassName mlayer pods' priorityClassName
+  ##
+  priorityClassName: ""
+  ## @param mlayer.schedulerName Name of the k8s scheduler (other than default) for mlayer pods
+  ## ref: https://kubernetes.io/docs/tasks/administer-cluster/configure-multiple-schedulers/
+  ##
+  schedulerName: ""
+  ## @param mlayer.lifecycleHooks for the mlayer container(s) to automate configuration before or after startup
+  ##
+  lifecycleHooks: {}
+  ## @param mlayer.extraEnvVars Array with extra environment variables to add to mlayer nodes
+  ## e.g:
+  ## extraEnvVars:
+  ##   - name: FOO
+  ##     value: "bar"
+  ##
+  extraEnvVars: []
+  ## @param mlayer.extraEnvVarsCM Name of existing ConfigMap containing extra env vars for mlayer nodes
+  ##
+  extraEnvVarsCM: "cat-env"
+  ## @param mlayer.extraEnvVarsSecret Name of existing Secret containing extra env vars for mlayer nodes
+  ##
+  extraEnvVarsSecret:
+  ## @param mlayer.extraVolumes Optionally specify extra list of additional volumes for the mlayer pod(s)
+  ##
+  extraVolumes:
+    - name: cat-config
+      secret:
+        secretName: cat-config
+    - name: cat-tmp
+      emptyDir:
+        medium: Memory
+  ## @param mlayer.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the mlayer container(s)
+  ##
+  extraVolumeMounts: 
+    - name: cat-config
+      mountPath: /usr/share/app/secrets/configs
+    - name: cat-tmp
+      mountPath: /tmp  
+  ## @param mlayer.sidecars Add additional sidecar containers to the mlayer pod(s)
+  ## e.g:
+  ## sidecars:
+   #   - name: your-image-name
+  ##     image: your-image
+  ##     imagePullPolicy: Always
+   ##     ports:
+  ##       - name: portname
+  ##         containerPort: 1234
+  ##
+  sidecars: {}
+  ## @param mlayer.initContainers Add additional init containers to the mlayer pod(s)
+  ## ref: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
+  ## e.g:
+  ## initContainers:
+  ##  - name: your-image-name
+  ##    image: your-image
+  ##    imagePullPolicy: Always
+  ##    command: ['sh', '-c', 'echo "hello world"']
+  ##
+  initContainers: {}
+
+  ## ref: https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
+  ## @param mlayer.autoscaling.enabled Enable Horizontal POD autoscaling for Apache
+  ## @param mlayer.autoscaling.minReplicas Minimum number of Apache replicas
+  ## @param mlayer.autoscaling.maxReplicas Maximum number of Apache replicas
+  ## @param mlayer.autoscaling.targetCPU Target CPU utilization percentage
+  ## @param mlayer.autoscaling.targetMemory Target Memory utilization percentage
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPU: 80
+    targetMemory:
+
+## @section postgres Parameters
+postgres:
+  ## @param postgres.enabled Enable postgres Verticle for deployment
+  enabled: true
+  ## @param postgres.replicaCount Number of postgres replicas to deploy
+
+  replicaCount: 1  
+  ## Configure extra options for postgres containers' liveness and readiness probes
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
+  ## @param postgres.livenessProbe.enabled Enable livenessProbe on postgres containers
+  ## @param postgres.livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
+  ## @param postgres.livenessProbe.periodSeconds Period seconds for livenessProbe
+  ## @param postgres.livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
+  ## @param postgres.livenessProbe.failureThreshold Failure threshold for livenessProbe
+  ## @param postgres.livenessProbe.successThreshold Success threshold for livenessProbe
+  ## @param postgres.livenessProbe.path Path for httpGet
+  ##
+  livenessProbe:
+    enabled: true
+    path: /metrics
+    initialDelaySeconds: 60
+    periodSeconds: 60
+    timeoutSeconds: 10
+    #failureThreshold: 10
+    #successThreshold: 10
+  ## @param postgres.readinessProbe.enabled Enable readinessProbe on postgres containers
+  ## @param postgres.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
+  ## @param postgres.readinessProbe.periodSeconds Period seconds for readinessProbe
+  ## @param postgres.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
+  ## @param postgres.readinessProbe.failureThreshold Failure threshold for readinessProbe
+  ## @param postgres.readinessProbe.successThreshold Success threshold for readinessProbe
+  ##
+  readinessProbe:
+    enabled: false
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 10
+    failureThreshold: 10
+    successThreshold: 10
+  ## @param postgres.startupProbe.enabled Enable startupProbe on postgres containers
+  ## @param postgres.startupProbe.initialDelaySeconds Initial delay seconds for startupProbe
+  ## @param postgres.startupProbe.periodSeconds Period seconds for startupProbe
+  ## @param postgres.startupProbe.timeoutSeconds Timeout seconds for startupProbe
+  ## @param postgres.startupProbe.failureThreshold Failure threshold for startupProbe
+  ## @param postgres.startupProbe.successThreshold Success threshold for startupProbe
+  ##
+  startupProbe:
+    enabled: false
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 10
+    failureThreshold: 10
+    successThreshold: 10
+  ## @param postgres.customLivenessProbe Custom livenessProbe that overrides the default one
+  ##
+  customLivenessProbe: {}
+  ## @param postgres.customReadinessProbe Custom readinessProbe that overrides the default one
+  ##
+  customReadinessProbe: {}
+  ## @param postgres.customStartupProbe Custom startupProbe that overrides the default one
+  ##
+  customStartupProbe: {}
+
+  ## Configure Pods Security Context
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+  ## @param postgres.podSecurityContext.enabled Enabled postgres pods' Security Context
+  ## @param postgres.podSecurityContext.fsGroup Set postgres pod's Security Context fsGroup
+  ##
+  podSecurityContext:
+    enabled: true
+    runAsNonRoot: true
+    runAsUser: 1001
+    fsGroup: 1001
+  ## Configure Container Security Context
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+  ## @param postgres.containerSecurityContext.enabled Enabled postgres containers' Security Context
+  ## @param postgres.containerSecurityContext.runAsUser Set postgres containers' Security Context runAsUser
+  ## @param postgres.containerSecurityContext.runAsNonRoot Set postgres containers' Security Context runAsNonRoot
+  ##
+  containerSecurityContext:
+    enabled: true
+    runAsNonRoot: true
+    runAsUser: 1001
+    allowPrivilegeEscalation: false
+    capabilities:
+        drop:
+          - ALL
+    readOnlyRootFilesystem: true
+   #%%OTHER_PARAMETERS_RELATED_TO_THIS_CONTAINER/POD%%
+   ## @param postgres.existingConfigmap The name of an existing ConfigMap with your custom configuration for postgres
+  ##
+  existingConfigmap:
+    
+  ## @param postgres.command Override default container command (useful when using custom images)
+  ##
+  command: ["/bin/bash"]
+  ## @param postgres.args Override default container args (useful when using custom images)
+  ##
+  args: ["-c","exec java  -Xmx1024m -Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.Log4j2LogDelegateFactory   -jar ./fatjar.jar  --host $$MY_POD_IP -c secrets/configs/config.json -m iudx.catalogue.server.database.postgres.PostgresVerticle"]  
+  ## @param postgres.hostAliases postgres pods host aliases
+  ## https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
+  ##
+  hostAliases: []
+  ## @param postgres.podLabels Extra labels for postgres pods
+  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+  ##
+  podLabels: {}
+ 
+  ##
+  ## @param postgres.podAffinityPreset Pod affinity preset. Ignored if `postgres.affinity` is set. Allowed values: `soft` or `hard`
+  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+  ##
+  podAffinityPreset: ""
+  ## @param postgres.podAntiAffinityPreset Pod anti-affinity preset. Ignored if `postgres.affinity` is set. Allowed values: `soft` or `hard`
+  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+  ##
+  podAntiAffinityPreset: ""
+  ## Node postgres.affinity preset
+  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity
+  ##
+  nodeAffinityPreset:
+    ## @param postgres.nodeAffinityPreset.type Node affinity preset type. Ignored if `postgres.affinity` is set. Allowed values: `soft` or `hard`
+    ##
+    type: ""
+    ## @param postgres.nodeAffinityPreset.key Node label key to match. Ignored if `postgres.affinity` is set
+    ##
+    key: ""
+    ## @param postgres.nodeAffinityPreset.values Node label values to match. Ignored if `postgres.affinity` is set
+    ## E.g.
+    ## values:
+    ##   - e2e-az1
+    ##   - e2e-az2
+    ##
+    values: []
+  ## @param postgres.affinity Affinity for postgres pods assignment
+  ## ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+  ## NOTE: `postgres.podAffinityPreset`, `postgres.podAntiAffinityPreset`, and `postgres.nodeAffinityPreset` will be ignored when it's set
+  ##
+  affinity: {}
+  ## @param postgres.nodeSelector Node labels for postgres pods assignment
+  ## ref: https://kubernetes.io/docs/user-guide/node-selection/
+  ##
+  nodeSelector:
+
+
+  ## @param postgres.tolerations Tolerations for postgres pods assignment
+  ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+  ##
+  tolerations: []
+  ## @param postgres.updateStrategy.type postgres statefulset strategy type
+  ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
+  ##
+  updateStrategy:
+    ## StrategyType
+    ## Can be set to RollingUpdate or OnDelete
+    ##
+    ##type: RollingUpdate
+  ## @param postgres.priorityClassName postgres pods' priorityClassName
+  ##
+  priorityClassName: ""
+  ## @param postgres.schedulerName Name of the k8s scheduler (other than default) for postgres pods
+  ## ref: https://kubernetes.io/docs/tasks/administer-cluster/configure-multiple-schedulers/
+  ##
+  schedulerName: ""
+  ## @param postgres.lifecycleHooks for the postgres container(s) to automate configuration before or after startup
+  ##
+  lifecycleHooks: {}
+  ## @param postgres.extraEnvVars Array with extra environment variables to add to postgres nodes
+  ## e.g:
+  ## extraEnvVars:
+  ##   - name: FOO
+  ##     value: "bar"
+  ##
+  extraEnvVars: []
+  ## @param postgres.extraEnvVarsCM Name of existing ConfigMap containing extra env vars for postgres nodes
+  ##
+  extraEnvVarsCM: "cat-env"
+  ## @param postgres.extraEnvVarsSecret Name of existing Secret containing extra env vars for postgres nodes
+  ##
+  extraEnvVarsSecret:
+  ## @param postgres.extraVolumes Optionally specify extra list of additional volumes for the postgres pod(s)
+  ##
+  extraVolumes:
+    - name: cat-config
+      secret:
+        secretName: cat-config
+    - name: cat-tmp
+      emptyDir:
+        medium: Memory
+  ## @param postgres.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the postgres container(s)
+  ##
+  extraVolumeMounts: 
+    - name: cat-config
+      mountPath: /usr/share/app/secrets/configs
+    - name: cat-tmp
+      mountPath: /tmp  
+  ## @param postgres.sidecars Add additional sidecar containers to the postgres pod(s)
+  ## e.g:
+  ## sidecars:
+   #   - name: your-image-name
+  ##     image: your-image
+  ##     imagePullPolicy: Always
+   ##     ports:
+  ##       - name: portname
+  ##         containerPort: 1234
+  ##
+  sidecars: {}
+  ## @param postgres.initContainers Add additional init containers to the postgres pod(s)
+  ## ref: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
+  ## e.g:
+  ## initContainers:
+  ##  - name: your-image-name
+  ##    image: your-image
+  ##    imagePullPolicy: Always
+  ##    command: ['sh', '-c', 'echo "hello world"']
+  ##
+  initContainers: {}
+
+  ## ref: https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
+  ## @param postgres.autoscaling.enabled Enable Horizontal POD autoscaling for Apache
+  ## @param postgres.autoscaling.minReplicas Minimum number of Apache replicas
+  ## @param postgres.autoscaling.maxReplicas Maximum number of Apache replicas
+  ## @param postgres.autoscaling.targetCPU Target CPU utilization percentage
+  ## @param postgres.autoscaling.targetMemory Target Memory utilization percentage
   autoscaling:
     enabled: true
     minReplicas: 1
